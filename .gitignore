@@ -8,3 +8,6 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Build cache lives at ~/.cache/devcontainer/ (universal, not project-local)
+# Nothing to gitignore here — build.sh writes nothing into the project directory

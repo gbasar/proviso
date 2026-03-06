@@ -4,8 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="78f5fd31-4e9a-4e74-88aa-5af48f4d21db" name="Changes" comment=" Cli done">
+    <list default="true" id="78f5fd31-4e9a-4e74-88aa-5af48f4d21db" name="Changes" comment=" Clauded added hist 1st test docker container the one i had him crete">
+      <change beforePath="$PROJECT_DIR$/.devcontainer/devcontainer.json" beforeDir="false" afterPath="$PROJECT_DIR$/.devcontainer/devcontainer.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" afterPath="$PROJECT_DIR$/.gitignore" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/Dockerfile.devcontainer" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile.devcontainer" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -27,14 +31,42 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+    "Docker.Dockerfile.devcontainer: Compose Deployment.executor": "Run",
+    "Docker.Dockerfile.executor": "Run",
     "Python tests.pytest in actions.executor": "Run",
+    "Python.cli_spike.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
     "RunOnceActivity.git.unshallow": "true",
+    "Shell Script.build.sh.executor": "Run",
     "git-widget-placeholder": "master",
-    "settings.editor.selected.configurable": "preferences.pluginManager"
+    "settings.editor.selected.configurable": "reference.settingsDialog.application.dockerConsole"
   }
 }]]></component>
-  <component name="RunManager">
+  <component name="RunManager" selected="Shell Script.build.sh">
+    <configuration name="build.sh" type="ShConfigurationType" temporary="true">
+      <option name="SCRIPT_TEXT" value="" />
+      <option name="INDEPENDENT_SCRIPT_PATH" value="true" />
+      <option name="SCRIPT_PATH" value="$PROJECT_DIR$/build.sh" />
+      <option name="SCRIPT_OPTIONS" value="" />
+      <option name="INDEPENDENT_SCRIPT_WORKING_DIRECTORY" value="true" />
+      <option name="SCRIPT_WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="INDEPENDENT_INTERPRETER_PATH" value="true" />
+      <option name="INTERPRETER_PATH" value="/usr/bin/env" />
+      <option name="INTERPRETER_OPTIONS" value="bash" />
+      <option name="EXECUTE_IN_TERMINAL" value="true" />
+      <option name="EXECUTE_SCRIPT_FILE" value="true" />
+      <envs />
+      <method v="2" />
+    </configuration>
+    <configuration name="Dockerfile.devcontainer: Compose Deployment" type="docker-deploy" factoryName="dockerfile" temporary="true" server-name="Docker">
+      <deployment type="dockerfile">
+        <settings>
+          <option name="containerName" value="" />
+          <option name="sourceFilePath" value="Dockerfile.devcontainer" />
+        </settings>
+      </deployment>
+      <method v="2" />
+    </configuration>
     <configuration name="pytest in actions" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
       <module name="proviso" />
       <option name="ENV_FILES" value="" />
@@ -52,8 +84,15 @@
       <option name="_new_targetType" value="&quot;PATH&quot;" />
       <method v="2" />
     </configuration>
+    <list>
+      <item itemvalue="Docker.Dockerfile.devcontainer: Compose Deployment" />
+      <item itemvalue="Python tests.pytest in actions" />
+      <item itemvalue="Shell Script.build.sh" />
+    </list>
     <recent_temporary>
       <list>
+        <item itemvalue="Shell Script.build.sh" />
+        <item itemvalue="Docker.Dockerfile.devcontainer: Compose Deployment" />
         <item itemvalue="Python tests.pytest in actions" />
       </list>
     </recent_temporary>
@@ -90,12 +129,21 @@
       <option name="project" value="LOCAL" />
       <updated>1772785936667</updated>
     </task>
-    <option name="localTasksCounter" value="3" />
+    <task id="LOCAL-00003" summary=" Clauded added hist 1st test docker container the one i had him crete">
+      <option name="closed" value="true" />
+      <created>1772787899981</created>
+      <option name="number" value="00003" />
+      <option name="presentableId" value="LOCAL-00003" />
+      <option name="project" value="LOCAL" />
+      <updated>1772787899981</updated>
+    </task>
+    <option name="localTasksCounter" value="4" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Initial commit" />
     <MESSAGE value=" Cli done" />
-    <option name="LAST_COMMIT_MESSAGE" value=" Cli done" />
+    <MESSAGE value=" Clauded added hist 1st test docker container the one i had him crete" />
+    <option name="LAST_COMMIT_MESSAGE" value=" Clauded added hist 1st test docker container the one i had him crete" />
   </component>
 </project>

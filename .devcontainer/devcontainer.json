@@ -4,9 +4,9 @@
     "dockerfile": "../Dockerfile.devcontainer",
     "context": "..",
     "args": {
-      // ── Swap this for your company image ──────────────────────────────────
-      // "BASE_IMAGE": "registry.corp.com/your-team/ubi9-python:latest"
-      "BASE_IMAGE": "registry.access.redhat.com/ubi9/ubi",
+      // ── Point at your pre-built tools image (from build.sh --push-tools) ──
+      // "TOOLS_IMAGE": "registry.corp.com/dev-tools:latest"
+      "TOOLS_IMAGE": "proviso-dev-tools:latest",
       "USERNAME": "devuser",
       "USER_UID": "1000"
     }
