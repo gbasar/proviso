@@ -165,21 +165,37 @@ The `--cache-from/--cache-to type=local` in `build.sh` saves the full Docker lay
 
 ---
 
-### 7. Fish repo: grouped echo (Dockerfile parser gotcha)
+### 7. Dockerfile multi-line bash strings: the parser gotcha
+
+The Docker parser scans **every line that isn't a continuation (`\`)** for instruction keywords — including lines inside a `bash -c '...'` string. Any bare word at the start of a line triggers it.
+
+Affected keywords seen so far: `name=` (fish repo file), `set` (`set -e` in cargo scripts).
 
 ```dockerfile
-# WRONG — Docker parser sees "name=..." as a Dockerfile instruction
-RUN echo '[section]
-name=value' > /etc/yum.repos.d/fish.repo
+# WRONG — "set -e" on its own line → Docker sees SET instruction
+RUN bash -c '
+    set -e
+    cargo install ...
+'
 
-# CORRECT — each line is always preceded by "echo"
+# WRONG — "name=..." on its own line → Docker sees NAME instruction
+RUN echo '[section]
+name=value' > file.conf
+
+# CORRECT for bash scripts — heredoc content is never scanned
+RUN bash <<'EOF'
+set -e
+cargo install ...
+EOF
+
+# CORRECT for writing config files — each line preceded by "echo"
 RUN { \
     echo '[section]'; \
     echo 'name=value'; \
-    } > /etc/yum.repos.d/fish.repo
+    } > file.conf
 ```
 
-**Why:** The Docker Dockerfile parser scans every line that's not a continuation (`\`) for instruction keywords. A bare `name=...` line looks like `NAME instruction` to the parser.
+**Rule of thumb:** Use `bash <<'EOF' ... EOF` for any multi-line shell script in a RUN instruction. Use grouped `echo` only when writing config file content.
 
 ---
 
