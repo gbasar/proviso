@@ -1,94 +1,62 @@
 # syntax=docker/dockerfile:1
 # ══════════════════════════════════════════════════════════════════════════════
-# Dockerfile.tools — The slow half. Built ONCE, pushed to your company registry,
-# pulled by every developer and every CI node.
-#
-# Contains: all dnf/pip/cargo/go tool compilation.
-# Does NOT contain: project config, non-root user, workspace setup.
-# ── Step 1: Repos and Core Tools ──────────────────────────────────────────────
+# Dockerfile.tools — The slow half. Built ONCE, cached aggressively.
 # ══════════════════════════════════════════════════════════════════════════════
 ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi
 FROM ${BASE_IMAGE}
 
 ARG PYTHON_VERSION=3.12
 
-# ── EPEL + CRB ───────────────────────────────────────────────────────────────
-# CRB (CodeReady Builder) must be enabled before EPEL or many EPEL packages
-# will fail to resolve their dependencies (tmux, btop, etc. hit this on aarch64)
-# ── Step 1: Repos and Core Tools ──────────────────────────────────────────────
+# ── Step 1: EPEL + CRB ──────────────────────────────────────────────────────
 RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm \
     && dnf install -y dnf-plugins-core \
     && /usr/bin/crb enable \
     && dnf clean all
 
-# ── Step 2: Main Package Install ──────────────────────────────────────────────
-# REMOVED the trailing backslash from the previous RUN block to prevent merging
-#tmux
+# ── Step 2: System packages ─────────────────────────────────────────────────
 RUN dnf install -y --allowerasing \
-    bash zsh git git-lfs curl wget unzip tar gzip bzip2 xz jq which file \
-    gcc gcc-c++ make pkgconfig \
-    python3.12 python3.12-devel python3.12-pip \
-    vim nodejs npm \
-    procps-ng iputils bind-utils net-tools openssh-clients less man-db \
-    ripgrep neovim fzf \
-    rust \
+    bash zsh git git-lfs curl wget unzip tar gzip bzip2 xz jq which file less \
+    gcc gcc-c++ make pkgconfig openssl-devel \
+    python${PYTHON_VERSION} python${PYTHON_VERSION}-devel python${PYTHON_VERSION}-pip \
+    vim neovim nodejs npm \
+    procps-ng iputils bind-utils net-tools openssh-clients man-db \
+    ripgrep fzf btop zoxide hyperfine \
     golang \
-    btop rclone libpcap-devel zoxide hyperfine \
+    rclone libpcap-devel \
     && dnf clean all
-#    c-ares tmux
-# ── Step 3: Fish Shell (External Repo) ────────────────────────────────────────
 
-
-# ── pip tools ─────────────────────────────────────────────────────────────────
-
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --default-toolchain stable \
+# ── Step 3: Rust via rustup (EPEL rustc too old) ────────────────────────────
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+    | sh -s -- -y --default-toolchain stable \
     && echo 'source /root/.cargo/env' >> /root/.bashrc
 ENV PATH="/root/.cargo/bin:${PATH}"
 
-
+# ── Step 4: pip tools ───────────────────────────────────────────────────────
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip${PYTHON_VERSION} install uv yq httpie
 
-# ── Nushell — heaviest cargo build, own layer ────────────────────────────────
+# ── Step 5: Nushell (heaviest, own layer) ────────────────────────────────────
 RUN --mount=type=cache,target=/root/.cargo/registry \
     --mount=type=cache,target=/root/.cargo/git \
-    --mount=type=cache,id=cargo-nu,target=/cargo-targets/nu \
-    bash <<'EOF'
-set -e
-CARGO_TARGET_DIR=/cargo-targets/nu \
     cargo install --locked --root /usr/local nu \
     && echo /usr/local/bin/nu >> /etc/shells
-EOF
 
-# ── All other cargo tools — 6 in parallel ────────────────────────────────────
+# ── Step 6: Cargo tools (sequential — reliable) ─────────────────────────────
 RUN --mount=type=cache,target=/root/.cargo/registry \
     --mount=type=cache,target=/root/.cargo/git \
-    --mount=type=cache,id=cargo-tools,target=/cargo-targets \
-    bash <<'EOF'
-set -euo pipefail
-CRATES=(
-    starship fd-find
-    eza bat broot
-    sd git-delta
-    procs du-dust bandwhich
-    gitui
-    xh dog
-    zellij atuin tealdeer
-    tokei just
-)
-_install() {
-    local crate="$1"
-    CARGO_TARGET_DIR="/cargo-targets/${crate}" \
-        cargo install --locked --root /usr/local --jobs 2 "${crate}" \
-        && echo "✓ ${crate}"
-}
-export -f _install
-printf "%s\n" "${CRATES[@]}" | xargs -P 6 -I{} bash -c "_install {}"
-echo "All cargo tools installed"
-EOF
+    for crate in \
+        starship fd-find eza bat broot \
+        sd git-delta procs du-dust \
+        gitui xh zellij atuin tealdeer \
+        tokei just; \
+    do \
+        echo "Installing ${crate}..." \
+        && cargo install --locked --root /usr/local "${crate}" \
+        && echo "✓ ${crate}" \
+        || echo "✗ ${crate} FAILED"; \
+    done
 
-# ── Go tools ──────────────────────────────────────────────────────────────────
-# direnv moved here from dnf — not in EPEL aarch64, but is a Go binary
+# ── Step 7: Go tools ────────────────────────────────────────────────────────
 RUN --mount=type=cache,target=/go-build/pkg/mod \
     GOPATH=/go-build GOBIN=/usr/local/bin \
     go install github.com/jesseduffield/lazygit@latest \

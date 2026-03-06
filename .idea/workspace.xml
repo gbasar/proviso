@@ -5,9 +5,6 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="78f5fd31-4e9a-4e74-88aa-5af48f4d21db" name="Changes" comment="mostly workjign claude onlyu">
-      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/proviso.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/proviso.iml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Dockerfile.tools" beforeDir="false" afterPath="$PROJECT_DIR$/Dockerfile.tools" afterDir="false" />
     </list>
@@ -165,7 +162,15 @@
       <option name="project" value="LOCAL" />
       <updated>1772816748775</updated>
     </task>
-    <option name="localTasksCounter" value="6" />
+    <task id="LOCAL-00006" summary="mostly workjign claude onlyu">
+      <option name="closed" value="true" />
+      <created>1772818987582</created>
+      <option name="number" value="00006" />
+      <option name="presentableId" value="LOCAL-00006" />
+      <option name="project" value="LOCAL" />
+      <updated>1772818987582</updated>
+    </task>
+    <option name="localTasksCounter" value="7" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
