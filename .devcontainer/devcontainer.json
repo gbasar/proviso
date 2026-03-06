@@ -1,0 +1,58 @@
+{
+  "name": "proviso",
+  "build": {
+    "dockerfile": "../Dockerfile.devcontainer",
+    "context": "..",
+    "args": {
+      // ── Swap this for your company image ──────────────────────────────────
+      // "BASE_IMAGE": "registry.corp.com/your-team/ubi9-python:latest"
+      "BASE_IMAGE": "registry.access.redhat.com/ubi9/ubi",
+      "USERNAME": "devuser",
+      "USER_UID": "1000"
+    }
+  },
+
+  // ── Bind mount: your code directory ──────────────────────────────────────
+  // This is NOT a copy. Both sides see the same files in real time.
+  // Edit on your Mac → container sees it instantly. No rebuild needed.
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+  "workspaceFolder": "/workspace",
+
+  // ── VS Code extensions (installed inside the container) ──────────────────
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "tamasfe.even-better-toml",
+        "redhat.vscode-yaml",
+        "github.vscode-github-actions",
+        "mhutchie.git-graph",
+        "eamodio.gitlens",
+        "asvetliakov.vscode-neovim"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/workspace/.venv/bin/python",
+        "editor.formatOnSave": true,
+        "[python]": {
+          "editor.defaultFormatter": "charliermarsh.ruff"
+        },
+        "terminal.integrated.defaultProfile.linux": "fish"
+      }
+    }
+  },
+
+  // ── Lifecycle hooks ───────────────────────────────────────────────────────
+  // postCreateCommand: runs ONCE when the container is first created
+  "postCreateCommand": "bash /workspace/.devcontainer/setup.sh",
+
+  // postStartCommand: runs EVERY time the container starts
+  "postStartCommand": "echo \"Branch: $(git -C /workspace branch --show-current 2>/dev/null) | Python: $(uv run python --version 2>&1 | head -1)\"",
+
+  // Run as the non-root devuser
+  "remoteUser": "devuser",
+
+  // Forward ports if your project has a dev server
+  "forwardPorts": []
+}

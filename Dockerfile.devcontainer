@@ -1,0 +1,157 @@
+# ══════════════════════════════════════════════════════════════════════════════
+# Dev Container — UBI9-based, flexible base image
+#
+# Override BASE_IMAGE for your company's hardened UBI:
+#   docker build --build-arg BASE_IMAGE=registry.corp.com/ubi9-base:latest ...
+# ══════════════════════════════════════════════════════════════════════════════
+ARG BASE_IMAGE=registry.access.redhat.com/ubi9/ubi
+FROM ${BASE_IMAGE}
+
+# ── Version pins (override at build time) ────────────────────────────────────
+ARG PYTHON_VERSION=3.12
+
+# ── EPEL for extra packages ───────────────────────────────────────────────────
+RUN dnf install -y \
+        https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm \
+    && dnf clean all
+
+# ── System packages ───────────────────────────────────────────────────────────
+RUN dnf install -y \
+    # shells / basics
+    bash \
+    zsh \
+    git \
+    git-lfs \
+    curl \
+    wget \
+    unzip \
+    tar \
+    gzip \
+    bzip2 \
+    xz \
+    jq \
+    which \
+    file \
+    # build tools (C extensions: orjson, pydantic-core)
+    gcc \
+    gcc-c++ \
+    make \
+    pkgconfig \
+    # Python
+    python${PYTHON_VERSION} \
+    python${PYTHON_VERSION}-devel \
+    python${PYTHON_VERSION}-pip \
+    # editors
+    vim \
+    # Node (needed by Mason LSP servers like pyright)
+    nodejs \
+    npm \
+    # debug / network
+    procps-ng \
+    iputils \
+    bind-utils \
+    net-tools \
+    openssh-clients \
+    tmux \
+    less \
+    man-db \
+    # ripgrep (telescope grep, needed in nvim)
+    ripgrep \
+    # neovim (EPEL)
+    neovim \
+    # fzf (EPEL)
+    fzf \
+    # Rust toolchain — used to build cargo tools from source
+    rust \
+    cargo \
+    # Go toolchain — used for lazygit, duf
+    golang \
+    # monitoring (EPEL)
+    btop \
+    # networking / transfer (EPEL)
+    rclone \
+    aria2 \
+    # dev productivity (EPEL)
+    direnv \
+    # needed by bandwhich (network capture)
+    libpcap-devel \
+    && dnf clean all
+
+# ── fish shell (from OpenSUSE repo — not in EPEL) ────────────────────────────
+RUN echo '[shells_fish_release_3]
+name=shells:fish:release:3
+type=rpm-md
+baseurl=https://download.opensuse.org/repositories/shells:/fish:/release:/3/RHEL_9/
+gpgcheck=1
+gpgkey=https://download.opensuse.org/repositories/shells:/fish:/release:/3/RHEL_9/repodata/repomd.xml.key
+enabled=1' > /etc/yum.repos.d/fish.repo \
+    && dnf install -y fish \
+    && dnf clean all
+
+# ── pip tools ────────────────────────────────────────────────────────────────
+RUN pip${PYTHON_VERSION} install --no-cache-dir \
+    uv \
+    yq \
+    httpie
+
+# ── Starship — built from source via cargo ───────────────────────────────────
+# NOTE: first build ~5 min; cached on rebuild
+RUN cargo install starship --locked --root /usr/local
+
+# ── Nushell — built from source via cargo ────────────────────────────────────
+# NOTE: first build ~15 min; cached on rebuild
+RUN cargo install nu --locked --root /usr/local \
+    && echo /usr/local/bin/nu >> /etc/shells
+
+# ── fd (fast find — used by fzf.fish) — built via cargo ─────────────────────
+RUN cargo install fd-find --locked --root /usr/local
+
+# ── cargo: file-navigation ────────────────────────────────────────────────────
+# NOTE: each RUN is a separate layer so one failure doesn't bust the others
+RUN cargo install eza       --locked --root /usr/local
+RUN cargo install bat       --locked --root /usr/local
+RUN cargo install zoxide    --locked --root /usr/local
+RUN cargo install broot     --locked --root /usr/local
+
+# ── cargo: text-processing ────────────────────────────────────────────────────
+RUN cargo install sd        --locked --root /usr/local
+RUN cargo install git-delta --locked --root /usr/local
+
+# ── cargo: monitoring ─────────────────────────────────────────────────────────
+RUN cargo install procs     --locked --root /usr/local
+RUN cargo install du-dust   --locked --root /usr/local
+RUN cargo install bandwhich --locked --root /usr/local
+
+# ── cargo: git-tools ──────────────────────────────────────────────────────────
+RUN cargo install gitui     --locked --root /usr/local
+
+# ── cargo: networking ─────────────────────────────────────────────────────────
+RUN cargo install xh        --locked --root /usr/local
+RUN cargo install dog       --locked --root /usr/local
+
+# ── cargo: shell ──────────────────────────────────────────────────────────────
+RUN cargo install zellij    --locked --root /usr/local
+RUN cargo install atuin     --locked --root /usr/local
+RUN cargo install tealdeer  --locked --root /usr/local
+
+# ── cargo: dev-productivity ───────────────────────────────────────────────────
+RUN cargo install tokei     --locked --root /usr/local
+RUN cargo install hyperfine --locked --root /usr/local
+RUN cargo install just      --locked --root /usr/local
+
+# ── go: lazygit + duf (not in EPEL, no cargo alternative) ────────────────────
+ENV GOPATH=/usr/local
+RUN go install github.com/jesseduffield/lazygit@latest
+RUN go install github.com/muesli/duf@latest
+
+# ── Non-root developer user ───────────────────────────────────────────────────
+ARG USERNAME=devuser
+ARG USER_UID=1000
+ARG USER_GID=${USER_UID}
+
+RUN groupadd --gid ${USER_GID} ${USERNAME} \
+    && useradd --uid ${USER_UID} --gid ${USER_GID} --shell /usr/bin/fish -m ${USERNAME} \
+    && echo "${USERNAME} ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+USER ${USERNAME}
+WORKDIR /workspace

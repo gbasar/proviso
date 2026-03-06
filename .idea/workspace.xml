@@ -4,15 +4,8 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="78f5fd31-4e9a-4e74-88aa-5af48f4d21db" name="Changes" comment="Initial commit">
-      <change beforePath="$PROJECT_DIR$/pyproject.toml" beforeDir="false" afterPath="$PROJECT_DIR$/pyproject.toml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/proviso/actions/package_install.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/proviso/actions/package_install.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/proviso/resources/__init__.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/proviso/resources/__init__.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/proviso/resources/models.py" beforeDir="false" afterPath="$PROJECT_DIR$/src/proviso/resources/models.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/actions/test_actions.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/actions/test_actions.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/actions/test_pipeline.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/actions/test_pipeline.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/resources/conftest.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/resources/conftest.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/tests/resources/test_models.py" beforeDir="false" afterPath="$PROJECT_DIR$/tests/resources/test_models.py" afterDir="false" />
+    <list default="true" id="78f5fd31-4e9a-4e74-88aa-5af48f4d21db" name="Changes" comment=" Cli done">
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -32,13 +25,15 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Python tests.pytest in actions.executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;master&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python tests.pytest in actions.executor": "Run",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "git-widget-placeholder": "master",
+    "settings.editor.selected.configurable": "preferences.pluginManager"
   }
-}</component>
+}]]></component>
   <component name="RunManager">
     <configuration name="pytest in actions" type="tests" factoryName="py.test" temporary="true" nameIsGenerated="true">
       <module name="proviso" />
@@ -87,11 +82,20 @@
       <option name="project" value="LOCAL" />
       <updated>1772757259645</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary=" Cli done">
+      <option name="closed" value="true" />
+      <created>1772785936667</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1772785936667</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="Initial commit" />
-    <option name="LAST_COMMIT_MESSAGE" value="Initial commit" />
+    <MESSAGE value=" Cli done" />
+    <option name="LAST_COMMIT_MESSAGE" value=" Cli done" />
   </component>
 </project>
