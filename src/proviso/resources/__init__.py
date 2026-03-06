@@ -5,6 +5,7 @@ from proviso.resources.models import (
     BinaryResource,
     FileResource,
     LibraryResource,
+    PackageResource,
     Resourcelike,
     SourceResource,
 )
@@ -15,6 +16,7 @@ __all__ = [
     "BinaryResource",
     "FileResource",
     "LibraryResource",
+    "PackageResource",
     "ResourceRegistry",
     "Resourcelike",
     "SourceResource",

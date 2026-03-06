@@ -5,7 +5,7 @@ from __future__ import annotations
 SAMPLE_MANIFEST: dict = {
     "resources": {
         "jq": {
-            "resource_type": "binary",
+            "resource_type": "package",
             "provider": "dnf",
             "destination": "/usr/bin",
             "links": ["/usr/local/bin/jq"],
@@ -13,7 +13,7 @@ SAMPLE_MANIFEST: dict = {
             "schedule": "0 1 * * *",
         },
         "requests": {
-            "resource_type": "library",
+            "resource_type": "package",
             "provider": "pip",
             "version": "2.31.0",
         },

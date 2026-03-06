@@ -1,0 +1,158 @@
+"""Parcel CLI — load manifest, select resources, dispatch through pipelines.
+
+Usage:
+    parcel cat package list
+    parcel cat package jq install -vvv
+    parcel cat package list --tag=dev
+    parcel cat source list --scheduled
+    parcel cat file trading-hosts status
+    parcel cat list
+    echo "jq" | parcel cat package install --stdin
+"""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+
+from proviso.cli.dispatch import Dispatcher
+from proviso.cli.output import format_output
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="parcel",
+        description="Universal declarative resource lifecycle manager.",
+    )
+    parser.add_argument(
+        "-m",
+        "--manifest",
+        default="manifest.conf",
+        help="Path to manifest file (default: manifest.conf)",
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="count",
+        default=0,
+        help="Verbosity: -v, -vv, -vvv",
+    )
+    parser.add_argument(
+        "--format",
+        choices=["text", "json", "yaml", "hocon", "toml"],
+        default="text",
+        help="Output format (default: text)",
+    )
+    parser.add_argument(
+        "--stdin",
+        action="store_true",
+        help="Read resource names from stdin",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show what would happen without doing it",
+    )
+
+    # Positional: cat <type> [name] [verb] [--flags]
+    parser.add_argument("command", nargs="*", help="cat <type> [name] [verb]")
+
+    return parser
+
+
+def parse_command(args: list[str]) -> dict[str, str | None]:
+    """Parse positional args into catalog, type, name, verb."""
+    result: dict[str, str | None] = {
+        "catalog": None,
+        "resource_type": None,
+        "name": None,
+        "verb": None,
+    }
+
+    if not args:
+        return result
+
+    # First arg should be "cat" (catalog)
+    if args[0] == "cat":
+        result["catalog"] = "cat"
+        args = args[1:]
+
+    if not args:
+        return result
+
+    # Known resource types
+    types = {"package", "source", "file", "host"}
+    verbs = {"list", "install", "uninstall", "sync", "status", "info", "connect", "link"}
+
+    # Next could be a type or "list" (for all types)
+    if args[0] in types:
+        result["resource_type"] = args[0]
+        args = args[1:]
+    elif args[0] in verbs:
+        result["verb"] = args[0]
+        return result
+
+    if not args:
+        return result
+
+    # Next could be a name or a verb
+    if args[0] in verbs:
+        result["verb"] = args[0]
+        args = args[1:]
+    else:
+        result["name"] = args[0]
+        args = args[1:]
+
+    if not args:
+        return result
+
+    # Remaining should be verb
+    if args[0] in verbs:
+        result["verb"] = args[0]
+
+    return result
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = build_parser()
+    args = parser.parse_args(argv)
+
+    cmd = parse_command(args.command)
+    manifest_path = Path(args.manifest)
+
+    # Read stdin names if --stdin
+    stdin_names: list[str] = []
+    if args.stdin and not sys.stdin.isatty():
+        stdin_names = [line.strip() for line in sys.stdin if line.strip()]
+
+    dispatcher = Dispatcher(
+        manifest_path=manifest_path,
+        verbosity=args.verbose,
+        output_format=args.format,
+        dry_run=args.dry_run,
+    )
+
+    try:
+        results = dispatcher.run(
+            resource_type=cmd["resource_type"],
+            name=cmd["name"],
+            verb=cmd["verb"] or "list",
+            stdin_names=stdin_names,
+        )
+    except FileNotFoundError:
+        print(f"Manifest not found: {manifest_path}", file=sys.stderr)
+        return 1
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+
+    output = format_output(results, fmt=args.format)
+    if output:
+        print(output)
+
+    return 0 if all(r.get("ok", True) for r in results) else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

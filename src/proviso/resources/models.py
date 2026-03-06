@@ -1,8 +1,7 @@
 """Resource models — typed, self-describing, immutable records.
 
-Four resource types:
-    BinaryResource  — system packages (dnf, apt, brew)
-    LibraryResource — language packages (pip, cargo, maven, npm, gem)
+Three resource types:
+    PackageResource — any installable package (dnf, apt, brew, pip, cargo, maven, npm, gem)
     SourceResource  — git repos (third-party or own code)
     FileResource    — everything else (host lists, SSH keys, configs, symlinks, notes)
 
@@ -42,8 +41,7 @@ class Resourcelike(Protocol):
 
 
 class ResourceKind(StrEnum):
-    BINARY = "binary"
-    LIBRARY = "library"
+    PACKAGE = "package"
     SOURCE = "source"
     FILE = "file"
 
@@ -69,22 +67,18 @@ class _ResourceBase(BaseModel):
 # --- Concrete resource models ---
 
 
-class BinaryResource(_ResourceBase):
-    """A binary installed via system package manager (dnf, apt, brew)."""
+class PackageResource(_ResourceBase):
+    """Any installable package — system or language-level.
 
-    resource_type: Literal[ResourceKind.BINARY] = ResourceKind.BINARY
-    provider: str  # "dnf", "apt", "brew"
-    destination: Path
-    links: tuple[Path, ...] = ()
-    get_latest: bool = False
+    The provider knows whether this is a binary or library.
+    Optional fields cover both use cases.
+    """
 
-
-class LibraryResource(_ResourceBase):
-    """A language-level package (pip, cargo, maven, npm, gem, go)."""
-
-    resource_type: Literal[ResourceKind.LIBRARY] = ResourceKind.LIBRARY
-    provider: str  # "pip", "cargo", "maven", "npm", "gem", "go"
+    resource_type: Literal[ResourceKind.PACKAGE] = ResourceKind.PACKAGE
+    provider: str  # "dnf", "apt", "brew", "pip", "cargo", "maven", "npm", "gem"
     version: str | None = None
+    destination: Path | None = None
+    links: tuple[Path, ...] = ()
     get_latest: bool = False
 
 
@@ -111,6 +105,11 @@ class FileResource(_ResourceBase):
 # --- Discriminated union for deserialization ---
 
 AnyResource = Annotated[
-    BinaryResource | LibraryResource | SourceResource | FileResource,
+    PackageResource | SourceResource | FileResource,
     Field(discriminator="resource_type"),
 ]
+
+
+# --- Backwards compatibility aliases ---
+BinaryResource = PackageResource
+LibraryResource = PackageResource

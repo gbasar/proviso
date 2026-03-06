@@ -13,7 +13,7 @@ from proviso.actions import (
     ShapeMismatchError,
 )
 from proviso.providers import DnfProvider, PipProvider, ProviderRegistry
-from proviso.resources import BinaryResource, FileResource, LibraryResource, SourceResource
+from proviso.resources import FileResource, PackageResource, SourceResource
 from proviso.shell import FakeShell, ShellResult
 
 # --- Helpers ---
@@ -38,7 +38,7 @@ class TestPackageInstall:
             }
         )
         action = PackageInstall(providers=_make_provider_registry(shell))
-        resource = BinaryResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
+        resource = PackageResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
 
         result = action.execute(resource)
 
@@ -49,7 +49,7 @@ class TestPackageInstall:
     def test_skip_already_installed(self) -> None:
         shell = FakeShell(responses={"rpm -q jq": ShellResult(0, "jq-1.6")})
         action = PackageInstall(providers=_make_provider_registry(shell))
-        resource = BinaryResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
+        resource = PackageResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
 
         result = action.execute(resource)
 
@@ -59,7 +59,7 @@ class TestPackageInstall:
     def test_update_when_get_latest(self) -> None:
         shell = FakeShell(responses={"dnf update -y jq": ShellResult(0)})
         action = PackageInstall(providers=_make_provider_registry(shell))
-        resource = BinaryResource(
+        resource = PackageResource(
             name="jq",
             provider="dnf",
             destination=Path("/usr/bin"),
@@ -79,7 +79,7 @@ class TestPackageInstall:
             }
         )
         action = PackageInstall(providers=_make_provider_registry(shell))
-        resource = LibraryResource(name="requests", provider="pip")
+        resource = PackageResource(name="requests", provider="pip")
 
         result = action.execute(resource)
 
@@ -93,7 +93,7 @@ class TestPackageInstall:
             }
         )
         action = PackageInstall(providers=_make_provider_registry(shell))
-        resource = BinaryResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
+        resource = PackageResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
 
         result = action.execute(resource)
 
@@ -202,7 +202,7 @@ class TestGitSync:
 
     def test_shape_mismatch(self) -> None:
         action = GitSync(shell=FakeShell())
-        resource = BinaryResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
+        resource = PackageResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
 
         with pytest.raises(ShapeMismatchError):
             action.execute(resource)

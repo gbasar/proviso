@@ -14,9 +14,8 @@ from pydantic import ValidationError
 
 from proviso.markup import create_default_registry
 from proviso.resources import (
-    BinaryResource,
     FileResource,
-    LibraryResource,
+    PackageResource,
     Resourcelike,
     ResourceRegistry,
     SourceResource,
@@ -28,20 +27,21 @@ from .conftest import SAMPLE_MANIFEST
 class TestConstruction:
     """Resources construct with correct defaults and required fields."""
 
-    def test_binary_resource(self) -> None:
-        r = BinaryResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
+    def test_package_resource_binary(self) -> None:
+        r = PackageResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
         assert r.name == "jq"
-        assert r.resource_type == "binary"
+        assert r.resource_type == "package"
         assert r.provider == "dnf"
         assert r.destination == Path("/usr/bin")
         assert r.links == ()
         assert r.get_latest is False
         assert r.schedule is None
 
-    def test_library_resource(self) -> None:
-        r = LibraryResource(name="requests", provider="pip", version="2.31.0")
-        assert r.resource_type == "library"
+    def test_package_resource_library(self) -> None:
+        r = PackageResource(name="requests", provider="pip", version="2.31.0")
+        assert r.resource_type == "package"
         assert r.version == "2.31.0"
+        assert r.destination is None
 
     def test_source_resource(self) -> None:
         r = SourceResource(
@@ -72,8 +72,8 @@ class TestConstruction:
 class TestImmutability:
     """Frozen models reject mutation."""
 
-    def test_cannot_mutate_binary(self) -> None:
-        r = BinaryResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
+    def test_cannot_mutate_package(self) -> None:
+        r = PackageResource(name="jq", provider="dnf")
         with pytest.raises(ValidationError):
             r.name = "other"  # type: ignore[misc]
 
@@ -86,12 +86,8 @@ class TestImmutability:
 class TestProtocolConformance:
     """All resource types satisfy Resourcelike Protocol."""
 
-    def test_binary_is_resourcelike(self) -> None:
-        r = BinaryResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
-        assert isinstance(r, Resourcelike)
-
-    def test_library_is_resourcelike(self) -> None:
-        r = LibraryResource(name="requests", provider="pip")
+    def test_package_is_resourcelike(self) -> None:
+        r = PackageResource(name="jq", provider="dnf")
         assert isinstance(r, Resourcelike)
 
     def test_source_is_resourcelike(self) -> None:
@@ -106,9 +102,9 @@ class TestProtocolConformance:
 class TestExtraFieldsRejected:
     """Strict models reject unknown fields."""
 
-    def test_binary_rejects_extra(self) -> None:
+    def test_package_rejects_extra(self) -> None:
         with pytest.raises(ValidationError):
-            BinaryResource(name="jq", provider="dnf", destination=Path("/usr/bin"), bogus="nope")
+            PackageResource(name="jq", provider="dnf", bogus="nope")
 
     def test_file_rejects_extra(self) -> None:
         with pytest.raises(ValidationError):
@@ -128,7 +124,7 @@ class TestRegistryLoading:
         reg.load_dict(SAMPLE_MANIFEST)
 
         jq = reg.get("jq")
-        assert isinstance(jq, BinaryResource)
+        assert isinstance(jq, PackageResource)
         assert jq.provider == "dnf"
 
         hosts = reg.get("trading-hosts")
@@ -178,8 +174,8 @@ class TestDiscriminatedUnion:
     def test_missing_required_field(self) -> None:
         reg = ResourceRegistry()
         with pytest.raises(ValidationError):
-            reg.load_dict({"resources": {"jq": {"resource_type": "binary"}}})
-            # missing provider, destination
+            reg.load_dict({"resources": {"jq": {"resource_type": "package"}}})
+            # missing provider
 
 
 class TestMarkupRoundTrip:
@@ -195,7 +191,7 @@ class TestMarkupRoundTrip:
         reg.load_file(manifest_path, markup)
 
         jq = reg.get("jq")
-        assert isinstance(jq, BinaryResource)
+        assert isinstance(jq, PackageResource)
         assert jq.get_latest is True
         assert jq.schedule == "0 1 * * *"
 

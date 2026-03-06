@@ -13,7 +13,7 @@ from proviso.actions import (
     Pipeline,
 )
 from proviso.providers import DnfProvider, PipProvider, ProviderRegistry
-from proviso.resources import BinaryResource
+from proviso.resources import PackageResource
 from proviso.shell import FakeShell, ShellResult
 
 # --- Helpers ---
@@ -57,7 +57,7 @@ class TestPipelineBasic:
         a2 = _StubAction("step-2")
         a3 = _StubAction("step-3")
         pipe = Pipeline(name="test-pipe", actions=[a1, a2, a3])
-        resource = BinaryResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
+        resource = PackageResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
 
         result = pipe.execute(resource)
 
@@ -69,7 +69,7 @@ class TestPipelineBasic:
 
     def test_empty_pipeline(self) -> None:
         pipe = Pipeline(name="empty", actions=[])
-        resource = BinaryResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
+        resource = PackageResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
 
         result = pipe.execute(resource)
 
@@ -83,7 +83,7 @@ class TestFailFast:
         a2 = _StubAction("step-2", ActionStatus.FAILED)
         a3 = _StubAction("step-3")
         pipe = Pipeline(name="test", actions=[a1, a2, a3], fail_mode=FailMode.FAST)
-        resource = BinaryResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
+        resource = PackageResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
 
         result = pipe.execute(resource)
 
@@ -95,7 +95,7 @@ class TestFailFast:
         a1 = _StubAction("step-1", ActionStatus.FAILED)
         a2 = _StubAction("step-2")
         pipe = Pipeline(name="test", actions=[a1, a2], fail_mode=FailMode.FAST)
-        resource = BinaryResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
+        resource = PackageResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
 
         result = pipe.execute(resource)
 
@@ -110,7 +110,7 @@ class TestContinueMode:
         a2 = _StubAction("step-2", ActionStatus.FAILED)
         a3 = _StubAction("step-3")
         pipe = Pipeline(name="test", actions=[a1, a2, a3], fail_mode=FailMode.CONTINUE)
-        resource = BinaryResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
+        resource = PackageResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
 
         result = pipe.execute(resource)
 
@@ -129,8 +129,8 @@ class TestShapeMismatchInPipeline:
         a2 = _StubAction("after")
         pipe = Pipeline(name="test", actions=[action, a2], fail_mode=FailMode.FAST)
 
-        # Send a BinaryResource — wrong shape for GitSync
-        resource = BinaryResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
+        # Send a PackageResource — wrong shape for GitSync
+        resource = PackageResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
         result = pipe.execute(resource)
 
         assert result.status == ActionStatus.FAILED
@@ -145,7 +145,7 @@ class TestShapeMismatchInPipeline:
         a2 = _StubAction("after")
         pipe = Pipeline(name="test", actions=[action, a2], fail_mode=FailMode.CONTINUE)
 
-        resource = BinaryResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
+        resource = PackageResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
         result = pipe.execute(resource)
 
         assert result.status == ActionStatus.FAILED
@@ -163,23 +163,25 @@ class TestNestedPipeline:
             name="outer",
             actions=[_StubAction("outer-1"), inner, _StubAction("outer-3")],
         )
-        resource = BinaryResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
+        resource = PackageResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
 
         result = outer.execute(resource)
 
         assert result.status == ActionStatus.SUCCESS
         assert len(result.results) == 3
-        # Second result is the inner pipeline's PipelineResult wrapped as ActionResult — 
+        # Second result is the inner pipeline's PipelineResult wrapped as ActionResult —
         # but since Pipeline.execute returns PipelineResult not ActionResult,
         # and our stub works, this proves nesting works
 
 
 class TestRealActionsInPipeline:
     def test_install_then_stub_log(self) -> None:
-        shell = FakeShell(responses={
-            "rpm -q jq": ShellResult(1),
-            "dnf install -y jq": ShellResult(0),
-        })
+        shell = FakeShell(
+            responses={
+                "rpm -q jq": ShellResult(1),
+                "dnf install -y jq": ShellResult(0),
+            }
+        )
         providers = _make_providers(shell)
         log = _StubAction("log")
 
@@ -187,7 +189,7 @@ class TestRealActionsInPipeline:
             name="install-and-log",
             actions=[PackageInstall(providers=providers), log],
         )
-        resource = BinaryResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
+        resource = PackageResource(name="jq", provider="dnf", destination=Path("/usr/bin"))
 
         result = pipe.execute(resource)
 
