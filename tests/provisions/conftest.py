@@ -20,7 +20,7 @@ SAMPLE_MANIFEST: dict = {
         "my-app": {
             "provision_type": "source",
             "repo": "git@github.com:myorg/my-app.git",
-            "target": "/opt/my-app",
+            "destination": "/opt/my-app",
             "branch": "main",
             "compile_cmd": "make install",
             "schedule": "0 */12 * * *",
@@ -28,12 +28,12 @@ SAMPLE_MANIFEST: dict = {
         },
         "trading-hosts": {
             "provision_type": "file",
-            "path": "/etc/proviso/hosts/trading.hocon",
+            "destination": "/etc/proviso/hosts/trading.hocon",
             "tags": ["trading", "production"],
         },
         "deploy-key": {
             "provision_type": "file",
-            "path": "~/.ssh/deploy_ed25519",
+            "destination": "~/.ssh/deploy_ed25519",
             "tags": ["ssh", "credentials"],
         },
     }

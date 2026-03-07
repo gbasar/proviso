@@ -29,12 +29,12 @@ SAMPLE_MANIFEST: dict[str, Any] = {
         "my-app": {
             "provision_type": "source",
             "repo": "git@github.com:org/app.git",
-            "target": "/opt/app",
+            "destination": "/opt/app",
             "schedule": "0 */12 * * *",
         },
         "trading-hosts": {
             "provision_type": "file",
-            "path": "/etc/proviso/hosts.conf",
+            "destination": "/etc/proviso/hosts.conf",
             "tags": ["trading"],
         },
     },

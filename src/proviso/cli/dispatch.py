@@ -5,6 +5,7 @@ Load manifest → select provisions → dispatch through actions/pipelines.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -13,6 +14,11 @@ from proviso.manifest.scanner import ManifestScanner
 from proviso.markup import create_default_registry
 from proviso.provisions.models import FileProvision, PackageProvision, SourceProvision
 from proviso.provisions.registry import ProvisionRegistry
+
+# Verbosity levels
+_V1 = 1   # action results (success / failed)
+_V2 = 2   # skipped results too
+_V3 = 3   # manifest loading details
 
 
 class Dispatcher:
@@ -32,16 +38,24 @@ class Dispatcher:
         self._markup = create_default_registry()
         self._provisions = ProvisionRegistry()
 
+    def _log(self, level: int, msg: str) -> None:
+        if self._verbosity >= level:
+            print(msg, file=sys.stderr)
+
     def _load(self) -> None:
         if not self._manifest_path.exists():
             return
         data = self._markup.read_file(self._manifest_path)
         if "PROVISION_LIST" in data:
             scanner = ManifestScanner(self._markup)
-            for provision in scanner.scan(self._manifest_path):
+            provisions = scanner.scan(self._manifest_path)
+            self._log(_V3, f"  loaded {len(provisions)} provisions via PROVISION_LIST")
+            for provision in provisions:
                 self._provisions._provisions[provision.name] = provision
+                self._log(_V3, f"    {provision.provision_type}  {provision.name}")
         else:
             self._provisions.load_dict(data)
+            self._log(_V3, f"  loaded manifest: {self._manifest_path}")
 
     def run(
         self,
@@ -106,13 +120,15 @@ class Dispatcher:
                 entry["get_latest"] = r.get_latest
             elif isinstance(r, SourceProvision):
                 entry["repo"] = r.repo
-                entry["target"] = str(r.target)
+                entry["destination"] = str(r.destination)
                 entry["branch"] = r.branch
             results.append(entry)
         return results
 
     def _action(self, verb: str, targets: dict[str, Any]) -> list[dict[str, Any]]:
         if self._dry_run:
+            for name in targets:
+                self._log(_V1, f"  DRY-RUN  {verb}  {name}")
             return [{"name": name, "verb": verb, "dry_run": True, "ok": True} for name in targets]
 
         results = []
@@ -130,14 +146,22 @@ class Dispatcher:
         for name, provision in ordered:
             if isinstance(provision, FileProvision) and verb in ("sync", "link"):
                 r = file_sync.execute(provision)
+                ok = r.status.value != "failed"
                 results.append({
                     "name": name,
                     "verb": verb,
-                    "ok": r.status.value != "failed",
+                    "ok": ok,
                     "status": r.status.value,
                     "message": r.message,
                 })
+                if r.status.value == "failed":
+                    print(f"  FAILED   {name}: {r.message}", file=sys.stderr)  # always
+                elif r.status.value == "skipped":
+                    self._log(_V2, f"  SKIP     {name}: {r.message}")
+                else:
+                    self._log(_V1, f"  OK       {name}: {r.message}")
             else:
                 results.append({"name": name, "verb": verb, "ok": True, "status": "dispatched"})
+                self._log(_V2, f"  DISPATCH {name}")
 
         return results

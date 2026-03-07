@@ -1,6 +1,6 @@
 """Manifest subsystem — loads catalog files into typed provision objects."""
 
-from proviso.manifest.loader import ManifestError, ManifestLoader
 from proviso.manifest.scanner import ManifestScanner
+from proviso.provisions.registry import ProvisionError
 
-__all__ = ["ManifestError", "ManifestLoader", "ManifestScanner"]
+__all__ = ["ManifestScanner", "ProvisionError"]

@@ -10,12 +10,15 @@
 - [x] ManifestScanner (PROVISION_LIST support)
 - [x] .gitignore (.DS_Store, .idea/)
 - [x] FileProvision model: path, origin, mode (SYMLINK/COPY/BOUND)
-- [x] 196 tests passing
+- [x] FileSync action (SYMLINK/COPY/BOUND, 210 tests passing)
+- [x] dotfiles.conf (BOUND + SYMLINK pattern, host ~/.proviso/dotfiles)
+- [x] root manifest.conf with PROVISION_LIST → provisions/ folder
+- [x] Dispatcher wired to ManifestScanner + FileSync + BOUND-before-SYMLINK ordering
+- [x] Logging: FAILED always, OK at -v****, SKIP at -vv, manifest detail at -vvv
+- [x] setup.sh step 1 replaced by parcel -v file sync
 
 ## Up next (in order)
-- [ ] FileSync action (ln -s, cp, bind mount — SYMLINK/COPY/BOUND)
+- [ ] setup.sh step 6 (devbox bin symlinks) → replace with proviso
 - [ ] ManifestLoader: produce SourceProvision + FileProvision (not just PackageProvision)
-- [ ] appendToPath field on SourceProvision  # deferred: implies runtime PATH mutation,
-      # which opens the build-time vs runtime env question (proxy vars, etc) — scope later
-- [ ] Strip setup.sh steps 1+6 once FileProvision SYMLINK works
 - [ ] CLI: proviso sync, proviso status
+- [ ] appendToPath on SourceProvision  # deferred: runtime PATH mutation → env var scope

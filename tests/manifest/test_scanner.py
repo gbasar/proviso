@@ -30,7 +30,7 @@ SOURCE_C = {
         "my-app": {
             "provision_type": "source",
             "repo": "git@github.com:org/app.git",
-            "target": "/opt/app",
+            "destination": "/opt/app",
         }
     }
 }

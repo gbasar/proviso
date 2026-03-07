@@ -1,7 +1,7 @@
-"""Manifest loader tests.
+"""Catalog loading tests — ProvisionRegistry with categorized (modern-linux-utils) style.
 
-Covers: the real .conf file, filtering, cross-reference skipping,
-metadata mapping, error cases, and load_string convenience method.
+Covers: real conf file, type inference, cross-reference skipping,
+category-as-tag, install block unwrapping, error cases.
 """
 
 from __future__ import annotations
@@ -9,44 +9,29 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
-from proviso.manifest.loader import ManifestError, ManifestLoader
+from proviso.markup.hocon import HoconAdapter
 from proviso.provisions.models import PackageProvision
+from proviso.provisions.registry import ProvisionError, ProvisionRegistry
 
-# Path to the real catalog (repo-relative from test runner cwd)
-CONF_PATH = Path(__file__).parent.parent.parent / ".devcontainer" / "config" / "modern-linux-utils.conf"
+CONF_PATH = (
+    Path(__file__).parent.parent.parent
+    / ".devcontainer" / "config" / "modern-linux-utils.conf"
+)
 
-# Minimal HOCON snippet used for unit-level tests — no file I/O needed
+_hocon = HoconAdapter()
+
 MINIMAL_CONF = """
 tools {
   ripgrep {
     description = "fast grep"
-    replaces    = "grep"
     install { method = cargo, package = ripgrep }
-    priority = 3
-    enabled  = true
-    tags     = ["cli", "rust", "search"]
-    grade    = "A+"
   }
 
   fd {
     description = "fast find"
-    replaces    = "find"
     install { method = cargo, package = fd-find }
-    priority = 3
-    enabled  = true
-    tags     = ["cli", "rust", "search"]
-    grade    = "A+"
-  }
-
-  jq {
-    description = "json processor"
-    replaces    = "awk"
-    install { method = dnf, package = jq }
-    priority = 3
-    enabled  = false
-    tags     = ["cli", "json"]
-    grade    = "A+"
   }
 }
 
@@ -56,166 +41,111 @@ other {
 """
 
 
+def _load_string(content: str) -> ProvisionRegistry:
+    reg = ProvisionRegistry()
+    reg.load_dict(_hocon.read_string(content))
+    return reg
+
+
 class TestRealManifest:
     """Load the actual modern-linux-utils.conf from the repo."""
 
+    def _load(self) -> ProvisionRegistry:
+        reg = ProvisionRegistry()
+        reg.load_dict(_hocon.read_file(CONF_PATH))
+        return reg
+
     def test_loads_without_error(self) -> None:
-        loader = ManifestLoader()
-        resources = loader.load(CONF_PATH)
-        assert len(resources) > 0
+        reg = self._load()
+        assert len(reg.provisions) > 0
 
-    def test_produces_package_resources(self) -> None:
-        loader = ManifestLoader()
-        resources = loader.load(CONF_PATH)
-        assert all(isinstance(r, PackageProvision) for r in resources)
+    def test_all_package_provisions(self) -> None:
+        reg = self._load()
+        assert all(isinstance(r, PackageProvision) for r in reg.provisions.values())
 
-    def test_cross_references_skipped(self) -> None:
-        """The delta cross-reference in git-tools must not appear twice."""
-        loader = ManifestLoader()
-        resources = loader.load(CONF_PATH)
-        names = [r.name for r in resources]
-        # delta appears in text-processing; the git-tools entry is a ref
-        assert names.count("delta") == 1
+    def test_cross_reference_skipped(self) -> None:
+        reg = self._load()
+        assert list(reg.provisions).count("delta") == 1
 
     def test_expected_count(self) -> None:
-        """33 entries in conf (32 real + 1 cross-reference) → 32 resources."""
-        loader = ManifestLoader()
-        resources = loader.load(CONF_PATH)
-        assert len(resources) == 32
+        """33 entries (32 real + 1 cross-ref) → 32 provisions."""
+        reg = self._load()
+        assert len(reg.provisions) == 32
 
     def test_known_tools_present(self) -> None:
-        loader = ManifestLoader()
-        resources = loader.load(CONF_PATH)
-        names = {r.name for r in resources}
-        for expected in ("eza", "bat", "ripgrep", "fd", "jq", "lazygit", "starship", "just"):
-            assert expected in names, f"Expected '{expected}' in loaded resources"
+        reg = self._load()
+        names = set(reg.provisions)
+        for name in ("eza", "bat", "ripgrep", "fd", "jq", "lazygit", "starship", "just"):
+            assert name in names
 
     def test_providers_mapped(self) -> None:
-        loader = ManifestLoader()
-        resources = loader.load(CONF_PATH)
-        by_name = {r.name: r for r in resources}
-
-        assert by_name["ripgrep"].provider == "cargo"
-        assert by_name["jq"].provider == "dnf"
-        assert by_name["yq"].provider == "pip"
-        assert by_name["lazygit"].provider == "go"
-
-    def test_tags_are_tuples(self) -> None:
-        loader = ManifestLoader()
-        resources = loader.load(CONF_PATH)
-        for r in resources:
-            assert isinstance(r.tags, tuple)
-
-    def test_category_in_metadata(self) -> None:
-        loader = ManifestLoader()
-        resources = loader.load(CONF_PATH)
-        by_name = {r.name: r for r in resources}
-
-        assert by_name["eza"].metadata["category"] == "file-navigation"
-        assert by_name["jq"].metadata["category"] == "text-processing"
-        assert by_name["lazygit"].metadata["category"] == "git-tools"
+        reg = self._load()
+        p = reg.provisions
+        assert p["ripgrep"].provider == "cargo"
+        assert p["jq"].provider == "dnf"
+        assert p["yq"].provider == "pip"
+        assert p["lazygit"].provider == "go"
 
     def test_package_field_when_differs(self) -> None:
-        """resource.package is set when install package differs from tool name."""
-        loader = ManifestLoader()
-        resources = loader.load(CONF_PATH)
-        by_name = {r.name: r for r in resources}
-
-        assert by_name["fd"].package == "fd-find"
-        assert by_name["dust"].package == "du-dust"
-        assert by_name["delta"].package == "git-delta"
+        reg = self._load()
+        p = reg.provisions
+        assert p["fd"].package == "fd-find"
+        assert p["dust"].package == "du-dust"
+        assert p["delta"].package == "git-delta"
 
     def test_package_field_none_when_same(self) -> None:
-        """resource.package is None when install package equals tool name."""
-        loader = ManifestLoader()
-        resources = loader.load(CONF_PATH)
-        by_name = {r.name: r for r in resources}
+        reg = self._load()
+        p = reg.provisions
+        assert p["ripgrep"].package is None
+        assert p["jq"].package is None
 
-        assert by_name["ripgrep"].package is None
-        assert by_name["jq"].package is None
+    def test_category_in_tags(self) -> None:
+        reg = self._load()
+        p = reg.provisions
+        assert "file-navigation" in p["eza"].tags
+        assert "text-processing" in p["jq"].tags
+        assert "git-tools" in p["lazygit"].tags
 
-
-class TestFiltering:
-    """Enabled/disabled filtering."""
-
-    def test_disabled_excluded_by_default(self) -> None:
-        loader = ManifestLoader()
-        resources = loader.load_string(MINIMAL_CONF)
-        names = {r.name for r in resources}
-        assert "jq" not in names
-
-    def test_disabled_included_when_flag_set(self) -> None:
-        loader = ManifestLoader()
-        resources = loader.load_string(MINIMAL_CONF, include_disabled=True)
-        names = {r.name for r in resources}
-        assert "jq" in names
-
-    def test_cross_reference_always_skipped(self) -> None:
-        loader = ManifestLoader()
-        resources = loader.load_string(MINIMAL_CONF)
-        names = {r.name for r in resources}
-        assert "delta" not in names
+    def test_tags_are_tuples(self) -> None:
+        reg = self._load()
+        for r in reg.provisions.values():
+            assert isinstance(r.tags, tuple)
 
 
-class TestMetadataMapping:
-    """Metadata fields populated correctly."""
+class TestMinimalConf:
+    def test_loads_two_entries(self) -> None:
+        reg = _load_string(MINIMAL_CONF)
+        assert set(reg.provisions) == {"ripgrep", "fd"}
 
-    def test_description_in_metadata(self) -> None:
-        loader = ManifestLoader()
-        resources = loader.load_string(MINIMAL_CONF)
-        by_name = {r.name: r for r in resources}
-        assert by_name["ripgrep"].metadata["description"] == "fast grep"
+    def test_cross_reference_skipped(self) -> None:
+        reg = _load_string(MINIMAL_CONF)
+        assert "delta" not in reg.provisions
 
-    def test_grade_in_metadata(self) -> None:
-        loader = ManifestLoader()
-        resources = loader.load_string(MINIMAL_CONF)
-        by_name = {r.name: r for r in resources}
-        assert by_name["ripgrep"].metadata["grade"] == "A+"
-
-    def test_priority_in_metadata(self) -> None:
-        loader = ManifestLoader()
-        resources = loader.load_string(MINIMAL_CONF)
-        by_name = {r.name: r for r in resources}
-        assert by_name["fd"].metadata["priority"] == 3
+    def test_description_on_provision(self) -> None:
+        reg = _load_string(MINIMAL_CONF)
+        assert reg.provisions["ripgrep"].description == "fast grep"
 
     def test_package_differs_from_name(self) -> None:
-        loader = ManifestLoader()
-        resources = loader.load_string(MINIMAL_CONF)
-        by_name = {r.name: r for r in resources}
-        assert by_name["fd"].name == "fd"
-        assert by_name["fd"].package == "fd-find"
+        reg = _load_string(MINIMAL_CONF)
+        assert reg.provisions["fd"].package == "fd-find"
 
-    def test_tags_preserved(self) -> None:
-        loader = ManifestLoader()
-        resources = loader.load_string(MINIMAL_CONF)
-        by_name = {r.name: r for r in resources}
-        assert "rust" in by_name["ripgrep"].tags
-        assert "search" in by_name["ripgrep"].tags
+    def test_category_tag(self) -> None:
+        reg = _load_string(MINIMAL_CONF)
+        assert "tools" in reg.provisions["ripgrep"].tags
 
 
 class TestErrors:
-    """ManifestError on malformed entries."""
-
-    def test_missing_install_block(self) -> None:
-        bad = "cat { jq { description = x } }"
-        loader = ManifestLoader()
-        with pytest.raises(ManifestError, match="missing an 'install' block"):
-            loader.load_string(bad)
-
     def test_missing_method(self) -> None:
         bad = "cat { jq { install { package = jq } } }"
-        loader = ManifestLoader()
-        with pytest.raises(ManifestError, match="missing 'method'"):
-            loader.load_string(bad)
+        with pytest.raises(ProvisionError, match="missing 'method'"):
+            _load_string(bad)
 
     def test_missing_package(self) -> None:
         bad = "cat { jq { install { method = dnf } } }"
-        loader = ManifestLoader()
-        with pytest.raises(ManifestError, match="missing 'package'"):
-            loader.load_string(bad)
+        with pytest.raises(ProvisionError, match="missing 'package'"):
+            _load_string(bad)
 
     def test_unknown_method(self) -> None:
         bad = "cat { jq { install { method = chocolatey, package = jq } } }"
-        loader = ManifestLoader()
-        with pytest.raises(ManifestError, match="unknown install method"):
-            loader.load_string(bad)
+        with pytest.raises(ProvisionError, match="unknown install method"):
+            _load_string(bad)

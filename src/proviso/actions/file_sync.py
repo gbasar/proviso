@@ -1,14 +1,13 @@
 """FileSync action — materialises a FileProvision on disk.
 
 Modes:
-    SYMLINK  ln -s origin path        idempotent: skip if link already correct
-    COPY     cp -r origin path        idempotent: skip if dest exists
-    BOUND    mount --bind origin path requires root; skip if already mounted
+    SYMLINK  ln -s src destination   idempotent: skip if link already correct
+    COPY     cp -r src destination   idempotent: skip if dest exists
+    BOUND    mount --bind src destination  requires root; skip if already mounted
 """
 
 from __future__ import annotations
 
-import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -39,30 +38,30 @@ class FileSync:
                 message=f"unknown mode {provision.mode!r}; expected SYMLINK, COPY, or BOUND",
             )
 
-        if provision.origin is None:
+        if provision.src is None:
             return ActionResult(
                 status=ActionStatus.FAILED,
                 action_name=self.action_name,
                 resource_name=provision.name,
-                message="origin is required for file-sync",
+                message="src is required for file-sync",
             )
 
-        origin = Path(provision.origin).expanduser()
-        dest = Path(provision.path).expanduser()
+        src = Path(provision.src).expanduser()
+        dest = Path(provision.destination).expanduser()
 
         match mode:
             case "SYMLINK":
-                return self._symlink(provision.name, origin, dest)
+                return self._symlink(provision.name, src, dest)
             case "COPY":
-                return self._copy(provision.name, origin, dest)
+                return self._copy(provision.name, src, dest)
             case "BOUND":
-                return self._bound(provision.name, origin, dest)
+                return self._bound(provision.name, src, dest)
 
     # ------------------------------------------------------------------
 
-    def _symlink(self, name: str, origin: Path, dest: Path) -> ActionResult:
+    def _symlink(self, name: str, src: Path, dest: Path) -> ActionResult:
         if dest.is_symlink():
-            if dest.resolve() == origin.resolve():
+            if dest.resolve() == src.resolve():
                 return ActionResult(
                     status=ActionStatus.SKIPPED,
                     action_name=self.action_name,
@@ -72,15 +71,15 @@ class FileSync:
             dest.unlink()
 
         dest.parent.mkdir(parents=True, exist_ok=True)
-        dest.symlink_to(origin)
+        dest.symlink_to(src)
         return ActionResult(
             status=ActionStatus.SUCCESS,
             action_name=self.action_name,
             resource_name=name,
-            message=f"symlinked {dest} → {origin}",
+            message=f"symlinked {dest} → {src}",
         )
 
-    def _copy(self, name: str, origin: Path, dest: Path) -> ActionResult:
+    def _copy(self, name: str, src: Path, dest: Path) -> ActionResult:
         if dest.exists():
             return ActionResult(
                 status=ActionStatus.SKIPPED,
@@ -90,19 +89,18 @@ class FileSync:
             )
 
         dest.parent.mkdir(parents=True, exist_ok=True)
-        if origin.is_dir():
-            shutil.copytree(origin, dest)
+        if src.is_dir():
+            shutil.copytree(src, dest)
         else:
-            shutil.copy2(origin, dest)
+            shutil.copy2(src, dest)
         return ActionResult(
             status=ActionStatus.SUCCESS,
             action_name=self.action_name,
             resource_name=name,
-            message=f"copied {origin} → {dest}",
+            message=f"copied {src} → {dest}",
         )
 
-    def _bound(self, name: str, origin: Path, dest: Path) -> ActionResult:
-        # Check if already mounted
+    def _bound(self, name: str, src: Path, dest: Path) -> ActionResult:
         try:
             mounts = Path("/proc/mounts").read_text()
             if str(dest) in mounts:
@@ -117,7 +115,7 @@ class FileSync:
 
         dest.mkdir(parents=True, exist_ok=True)
         result = subprocess.run(
-            ["mount", "--bind", str(origin), str(dest)],
+            ["mount", "--bind", str(src), str(dest)],
             capture_output=True,
             text=True,
         )
@@ -132,5 +130,5 @@ class FileSync:
             status=ActionStatus.SUCCESS,
             action_name=self.action_name,
             resource_name=name,
-            message=f"bind-mounted {origin} → {dest}",
+            message=f"bind-mounted {src} → {dest}",
         )

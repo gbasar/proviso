@@ -43,9 +43,8 @@ dev-tools {
 ```hocon
 repos {
   custom-search {
-    repo         = "git@github.com:acme/search.git"
-    target       = "/opt/custom-search"
-    appendToPath = ["search/build/output/bin"]
+    repo        = "git@github.com:acme/search.git"
+    destination = "/opt/custom-search"
   }
 }
 ```
@@ -58,22 +57,22 @@ dotfiles {
   # BOUND first — grafts your host dotfiles folder into the container.
   # Everything below depends on this path existing.
   dot_files_folder {
-    origin = "~/.proviso/dotfiles"  # on your host (Windows, Mac, Linux)
-    path   = "/proviso/dotfiles"    # where it appears inside the container
-    mode   = BOUND
+    src         = "~/.proviso/dotfiles"  # on your host (Windows, Mac, Linux)
+    destination = "/proviso/dotfiles"    # where it appears inside the container
+    mode        = BOUND
   }
 
   # SYMLINK — places configs where apps expect them.
-  # origin must use the container path, not the host path.
+  # src must use the container path, not the host path.
   bashrc {
-    origin = "/proviso/dotfiles/.bashrc"
-    path   = "~/.bashrc"
-    mode   = SYMLINK
+    src         = "/proviso/dotfiles/.bashrc"
+    destination = "~/.bashrc"
+    mode        = SYMLINK
   }
   nvim {
-    origin = "/proviso/dotfiles/config/nvim"
-    path   = "~/.config/nvim"
-    mode   = SYMLINK
+    src         = "/proviso/dotfiles/config/nvim"
+    destination = "~/.config/nvim"
+    mode        = SYMLINK
   }
 
 }
@@ -88,12 +87,12 @@ dotfiles {
 | `PackageProvision` | — | `dnf install`, `cargo install`, `pip install`, `go install` |
 | `SourceProvision` | — | `git clone` / `git pull` |
 | `FileProvision` | `BOUND` | `docker run --mount type=bind,...` |
-| `FileProvision` | `SYMLINK` | `ln -s origin path` |
-| `FileProvision` | `COPY` | `cp origin path` |
+| `FileProvision` | `SYMLINK` | `ln -s src destination` |
+| `FileProvision` | `COPY` | `cp src destination` |
 
 > `BOUND` must run before any `SYMLINK` that references its path — a symlink to a missing path is a dead pointer.
 
-Provisions are immutable Pydantic models. Actions are composable pipelines. Providers are injected — swap `DnfProvider` for `AptProvider` and the same manifest works on Ubuntu.
+Provisions are immutable Pydantic models. Each type shares a common base (`name`, `description`, `tags`, `schedule`, `metadata`) and defines its own `src`/`destination` with the appropriate Python type — `Path` for files, a validated git URI for source repos. No shared base field is typed as `Any`. Actions are composable pipelines. Providers are injected — swap `DnfProvider` for `AptProvider` and the same manifest works on Ubuntu.
 
 ---
 

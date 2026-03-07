@@ -27,7 +27,7 @@ class GitSync:
                 f"{self.action_name} accepts SourceProvision, got {type(provision).__name__}"
             )
 
-        target = str(provision.target)
+        target = str(provision.destination)
         exists = self._shell.run(f"test -d {target}/.git")
 
         if exists.success:

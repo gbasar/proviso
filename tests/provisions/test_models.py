@@ -47,26 +47,26 @@ class TestConstruction:
         r = SourceProvision(
             name="my-app",
             repo="git@github.com:org/app.git",
-            target=Path("/opt/app"),
+            destination=Path("/opt/app"),
         )
         assert r.provision_type == "source"
         assert r.branch == "main"
         assert r.compile_cmd is None
 
     def test_file_provision(self) -> None:
-        r = FileProvision(name="hosts", path=Path("/etc/hosts"))
+        r = FileProvision(name="hosts", destination=Path("/etc/hosts"))
         assert r.provision_type == "file"
         assert r.mode is None
 
     def test_file_provision_symlink(self) -> None:
         r = FileProvision(
             name="dotfile",
-            path=Path("~/.bashrc"),
-            origin=Path("/opt/dotfiles/.bashrc"),
+            destination=Path("~/.bashrc"),
+            src=Path("/opt/dotfiles/.bashrc"),
             mode="SYMLINK",
         )
         assert r.mode == "SYMLINK"
-        assert r.origin == Path("/opt/dotfiles/.bashrc")
+        assert r.src == Path("/opt/dotfiles/.bashrc")
 
 
 class TestImmutability:
@@ -78,9 +78,9 @@ class TestImmutability:
             r.name = "other"  # type: ignore[misc]
 
     def test_cannot_mutate_file(self) -> None:
-        r = FileProvision(name="hosts", path=Path("/etc/hosts"))
+        r = FileProvision(name="hosts", destination=Path("/etc/hosts"))
         with pytest.raises(ValidationError):
-            r.path = Path("/other")  # type: ignore[misc]
+            r.destination = Path("/other")  # type: ignore[misc]
 
 
 class TestProtocolConformance:
@@ -91,11 +91,11 @@ class TestProtocolConformance:
         assert isinstance(r, Provisionlike)
 
     def test_source_is_provisionlike(self) -> None:
-        r = SourceProvision(name="app", repo="git@x", target=Path("/opt"))
+        r = SourceProvision(name="app", repo="git@github.com:org/x.git", destination=Path("/opt"))
         assert isinstance(r, Provisionlike)
 
     def test_file_is_provisionlike(self) -> None:
-        r = FileProvision(name="hosts", path=Path("/etc/hosts"))
+        r = FileProvision(name="hosts", destination=Path("/etc/hosts"))
         assert isinstance(r, Provisionlike)
 
 
@@ -108,7 +108,7 @@ class TestExtraFieldsRejected:
 
     def test_file_rejects_extra(self) -> None:
         with pytest.raises(ValidationError):
-            FileProvision(name="hosts", path=Path("/etc/hosts"), bogus="nope")
+            FileProvision(name="hosts", destination=Path("/etc/hosts"), bogus="nope")
 
 
 class TestRegistryLoading:
@@ -207,6 +207,7 @@ class TestMarkupRoundTrip:
         app = reg.get("my-app")
         assert isinstance(app, SourceProvision)
         assert app.compile_cmd == "make install"
+        assert app.repo == "git@github.com:myorg/my-app.git"
 
     def test_manifest_through_hocon(self, tmp_path: Path) -> None:
         markup = create_default_registry()

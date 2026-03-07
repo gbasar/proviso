@@ -102,7 +102,7 @@ class TestPackageInstall:
     def test_shape_mismatch(self) -> None:
         shell = FakeShell()
         action = PackageInstall(providers=_make_provider_registry(shell))
-        provision = FileProvision(name="hosts", path=Path("/etc/hosts"))
+        provision = FileProvision(name="hosts", destination=Path("/etc/hosts"))
 
         with pytest.raises(ShapeMismatchError):
             action.execute(provision)
@@ -110,7 +110,7 @@ class TestPackageInstall:
     def test_shape_mismatch_source(self) -> None:
         shell = FakeShell()
         action = PackageInstall(providers=_make_provider_registry(shell))
-        provision = SourceProvision(name="app", repo="git@x", target=Path("/opt"))
+        provision = SourceProvision(name="app", repo="git@github.com:org/x.git", destination=Path("/opt"))
 
         with pytest.raises(ShapeMismatchError):
             action.execute(provision)
@@ -131,7 +131,7 @@ class TestGitSync:
         provision = SourceProvision(
             name="app",
             repo="git@github.com:org/app.git",
-            target=Path("/opt/app"),
+            destination=Path("/opt/app"),
         )
 
         result = action.execute(provision)
@@ -150,7 +150,7 @@ class TestGitSync:
         provision = SourceProvision(
             name="app",
             repo="git@github.com:org/app.git",
-            target=Path("/opt/app"),
+            destination=Path("/opt/app"),
         )
 
         result = action.execute(provision)
@@ -170,7 +170,7 @@ class TestGitSync:
         provision = SourceProvision(
             name="app",
             repo="git@github.com:org/app.git",
-            target=Path("/opt/app"),
+            destination=Path("/opt/app"),
             compile_cmd="make install",
         )
 
@@ -191,7 +191,7 @@ class TestGitSync:
         provision = SourceProvision(
             name="app",
             repo="git@github.com:org/app.git",
-            target=Path("/opt/app"),
+            destination=Path("/opt/app"),
             compile_cmd="make install",
         )
 
@@ -209,7 +209,7 @@ class TestGitSync:
 
     def test_shape_mismatch_file(self) -> None:
         action = GitSync(shell=FakeShell())
-        provision = FileProvision(name="hosts", path=Path("/etc/hosts"))
+        provision = FileProvision(name="hosts", destination=Path("/etc/hosts"))
 
         with pytest.raises(ShapeMismatchError):
             action.execute(provision)
