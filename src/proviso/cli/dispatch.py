@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import sys
 from pathlib import Path
-from typing import Any
+from typing import IO, Any
 
 from proviso.actions.file_sync import FileSync
 from proviso.actions.package_install import PackageInstall
@@ -37,11 +37,16 @@ class Dispatcher:
         verbosity: int = 0,
         output_format: str = "text",
         dry_run: bool = False,
+        log_file: Path | None = None,
     ) -> None:
         self._manifest_path = manifest_path
         self._verbosity = verbosity
         self._format = output_format
         self._dry_run = dry_run
+        self._log_fh: IO[str] | None = None
+        if log_file is not None:
+            log_file.parent.mkdir(parents=True, exist_ok=True)
+            self._log_fh = log_file.open("a")
         self._markup = create_default_registry()
         self._provisions = ProvisionRegistry()
         _shell = SubprocessShell()
@@ -53,6 +58,8 @@ class Dispatcher:
     def _log(self, level: int, msg: str) -> None:
         if self._verbosity >= level:
             print(msg, file=sys.stderr)
+        if self._log_fh is not None:
+            print(msg, file=self._log_fh, flush=True)
 
     def _load(self) -> None:
         if not self._manifest_path.exists():
@@ -174,7 +181,10 @@ class Dispatcher:
                 "message": r.message,
             })
             if r.status.value == "failed":
-                print(f"  FAILED   {name}: {r.message}", file=sys.stderr)
+                msg = f"  FAILED   {name}: {r.message}"
+                print(msg, file=sys.stderr)
+                if self._log_fh is not None:
+                    print(msg, file=self._log_fh, flush=True)
             elif r.status.value == "skipped":
                 self._log(_V2, f"  SKIP     {name}: {r.message}")
             else:

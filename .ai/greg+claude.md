@@ -17,6 +17,13 @@
 - [x] Logging: FAILED always, OK at -v****, SKIP at -vv, manifest detail at -vvv
 - [x] setup.sh step 1 replaced by parcel -v file sync
 
+## Package issues (not proviso bugs — revisit individually)
+- [ ] gitui — openssl-sys build; OPENSSL_NO_VENDOR=1 added, verify on next build
+- [ ] zellij — same openssl-sys issue + yanked packages in lock; verify on next build
+- [ ] tmux — not in EPEL 9; find source or alternative (e.g. compile, different repo)
+- [ ] aria2 — missing libcares.so.2 in EPEL 9; needs c-ares or alternative
+- [ ] dog (DNS client) — crate `dog` on crates.io is a library, not the ogham/dog binary; find correct install path
+
 ## Up next (in order)
 - [x] setup.sh step 6 (devbox bin symlinks) → trashed for now
 - [x] setup.sh steps 2-4 (fisher/vim-plug/lazy.nvim installs) → trashed for now
