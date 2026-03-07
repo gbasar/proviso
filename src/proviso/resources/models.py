@@ -76,6 +76,7 @@ class PackageResource(_ResourceBase):
 
     resource_type: Literal[ResourceKind.PACKAGE] = ResourceKind.PACKAGE
     provider: str  # "dnf", "apt", "brew", "pip", "cargo", "maven", "npm", "gem"
+    package: str | None = None  # install arg passed to provider; falls back to name when None
     version: str | None = None
     destination: Path | None = None
     links: tuple[Path, ...] = ()

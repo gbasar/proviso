@@ -30,11 +30,12 @@ class PackageInstall:
 
         provider = self._providers.get(resource.provider)
         name = resource.name
+        package = resource.package or name
 
         if resource.get_latest:
-            result = provider.update(name)
+            result = provider.update(package)
         else:
-            current = provider.status(name)
+            current = provider.status(package)
             if current.status == PackageStatus.INSTALLED:
                 return ActionResult(
                     status=ActionStatus.SKIPPED,
@@ -42,7 +43,7 @@ class PackageInstall:
                     resource_name=name,
                     message="already installed",
                 )
-            result = provider.install(name)
+            result = provider.install(package)
 
         if result.status == PackageStatus.INSTALLED:
             return ActionResult(

@@ -4,7 +4,7 @@
 #
 # Cache location (universal — NOT project-local):
 #   ~/.cache/devcontainer/buildx/
-#
+#  XDG Base Directory Specification — a Linux standard that says user cache/config/data should live in ~/.cache, ~/.config, ~/.local/share instead of random dotfiles everywhere. XDG_CACHE_HOME lets you override where ~/.cache points.
 #   Follows XDG: override with XDG_CACHE_HOME or DEV_CACHE_DIR env var.
 #   Shared across ALL devcontainer projects on this machine.
 #   cargo registry, go modules, pip wheels — all reused regardless of project.
