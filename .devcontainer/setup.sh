@@ -12,42 +12,11 @@ step() { echo ""; echo "━━━ $* ━━━"; }
 
 # ── 1. Dotfile symlinks (managed by proviso) ─────────────────────────────────
 step "Linking configs"
-uv run parcel -v -m /workspace/.devcontainer/config/manifest.conf file sync
+export PROVISION_LIST=/workspace/.devcontainer/config/manifest.conf
+uv run parcel -vvv -m "$PROVISION_LIST" file sync
 echo "  configs linked"
 
-# ── 2. Fisher + fish plugins ──────────────────────────────────────────────────
-step "Installing fish plugins (fisher)"
-
-fish -c "
-  curl -sL https://raw.githubusercontent.com/jorgebucaran/fisher/main/functions/fisher.fish \
-    | source \
-  && fisher install jorgebucaran/fisher \
-  && fisher install jethrokuan/z \
-  && fisher install PatrickF1/fzf.fish \
-  && fisher install jorgebucaran/autopair.fish \
-  && fisher install nickeb96/puffer-fish \
-  && fisher install franciscolourenco/done \
-  && fisher install gazorby/fish-abbreviation-tips
-" && echo "  fish plugins installed"
-
-# ── 3. vim-plug + plugins ─────────────────────────────────────────────────────
-step "Installing vim-plug and plugins"
-
-curl -fsSLo ~/.vim/autoload/plug.vim \
-    https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-
-# -E = ex mode (non-interactive), -s = silent, || true because vim exits non-zero
-vim -E -s -u ~/.vimrc +PlugInstall +qall 2>/dev/null || true
-echo "  vim plugins installed"
-
-# ── 4. Neovim lazy.nvim pre-sync ─────────────────────────────────────────────
-step "Pre-installing neovim plugins (lazy.nvim)"
-
-# lazy.nvim bootstraps itself on first run; this pre-installs all plugins
-nvim --headless "+Lazy! sync" +qa 2>/dev/null || true
-echo "  nvim plugins installed"
-
-# ── 5. Python project dependencies ───────────────────────────────────────────
+# ── 2. Python project dependencies ───────────────────────────────────────────
 step "Installing Python dependencies (uv sync)"
 
 cd /workspace
@@ -55,40 +24,7 @@ uv sync --all-extras
 
 echo "  Python deps ready at /workspace/.venv"
 
-# ── 6. ~/.devbox/bin/<category>/ symlinks ────────────────────────────────────
-# Each category dir mirrors the keys in modern-linux-utils.conf.
-# Uses `command -v` so it works regardless of whether dnf put it in /usr/bin
-# or cargo put it in /usr/local/bin. Missing tools are skipped, not fatal.
-step "Creating ~/.devbox/bin/<category>/ symlinks"
-
-DEVBOX="$HOME/.devbox/bin"
-
-_link() {
-    local category="$1"; shift
-    local dir="$DEVBOX/$category"
-    mkdir -p "$dir"
-    for bin in "$@"; do
-        local path
-        path=$(command -v "$bin" 2>/dev/null) || { echo "  SKIP  $category/$bin (not found)"; continue; }
-        ln -sf "$path" "$dir/$bin"
-        echo "  LINK  $category/$bin -> $path"
-    done
-}
-
-# Categories match the keys in modern-linux-utils.conf
-_link file-navigation  eza bat zoxide broot
-_link search           rg fd fzf
-_link text-processing  jq yq sd delta
-_link monitoring       btop procs duf dust bandwhich
-_link git-tools        lazygit gitui delta
-_link networking       http xh dog
-_link shell            starship tmux zellij atuin tldr nu fish
-_link file-transfer    rclone aria2c
-_link dev-productivity tokei hyperfine just direnv
-
-echo "  done → $DEVBOX"
-
-# ── 7. Print welcome ─────────────────────────────────────────────────────────
+# ── 6. Print welcome ─────────────────────────────────────────────────────────
 echo ""
 echo "╔══════════════════════════════════════════════════════╗"
 echo "║  Dev container ready                                 ║"

@@ -10,10 +10,17 @@ from pathlib import Path
 from typing import Any
 
 from proviso.actions.file_sync import FileSync
+from proviso.actions.package_install import PackageInstall
 from proviso.manifest.scanner import ManifestScanner
 from proviso.markup import create_default_registry
+from proviso.providers.cargo import CargoProvider
+from proviso.providers.dnf import DnfProvider
+from proviso.providers.go import GoProvider
+from proviso.providers.pip import PipProvider
+from proviso.providers.registry import ProviderRegistry
 from proviso.provisions.models import FileProvision, PackageProvision, SourceProvision
 from proviso.provisions.registry import ProvisionRegistry
+from proviso.shell.subprocess import SubprocessShell
 
 # Verbosity levels
 _V1 = 1   # action results (success / failed)
@@ -37,6 +44,11 @@ class Dispatcher:
         self._dry_run = dry_run
         self._markup = create_default_registry()
         self._provisions = ProvisionRegistry()
+        _shell = SubprocessShell()
+        _providers = ProviderRegistry()
+        for p in [DnfProvider(_shell), PipProvider(_shell), CargoProvider(_shell), GoProvider(_shell)]:
+            _providers.register(p)
+        self._package_install = PackageInstall(_providers)
 
     def _log(self, level: int, msg: str) -> None:
         if self._verbosity >= level:
@@ -146,22 +158,26 @@ class Dispatcher:
         for name, provision in ordered:
             if isinstance(provision, FileProvision) and verb in ("sync", "link"):
                 r = file_sync.execute(provision)
-                ok = r.status.value != "failed"
-                results.append({
-                    "name": name,
-                    "verb": verb,
-                    "ok": ok,
-                    "status": r.status.value,
-                    "message": r.message,
-                })
-                if r.status.value == "failed":
-                    print(f"  FAILED   {name}: {r.message}", file=sys.stderr)  # always
-                elif r.status.value == "skipped":
-                    self._log(_V2, f"  SKIP     {name}: {r.message}")
-                else:
-                    self._log(_V1, f"  OK       {name}: {r.message}")
+            elif isinstance(provision, PackageProvision) and verb == "install":
+                r = self._package_install.execute(provision)
             else:
                 results.append({"name": name, "verb": verb, "ok": True, "status": "dispatched"})
                 self._log(_V2, f"  DISPATCH {name}")
+                continue
+
+            ok = r.status.value != "failed"
+            results.append({
+                "name": name,
+                "verb": verb,
+                "ok": ok,
+                "status": r.status.value,
+                "message": r.message,
+            })
+            if r.status.value == "failed":
+                print(f"  FAILED   {name}: {r.message}", file=sys.stderr)
+            elif r.status.value == "skipped":
+                self._log(_V2, f"  SKIP     {name}: {r.message}")
+            else:
+                self._log(_V1, f"  OK       {name}: {r.message}")
 
         return results

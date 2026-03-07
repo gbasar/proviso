@@ -93,5 +93,7 @@ banner "Done"
 echo "  Image:  $DEV_TAG"
 echo "  Cache:  $CACHE_DIR  ($(du -sh "$CACHE_DIR" 2>/dev/null | cut -f1) on disk)"
 echo ""
-echo "  Run it:"
-echo "    docker run -it --rm --mount type=bind,source=\$(pwd),target=/workspace $DEV_TAG"
+
+docker run -it --rm \
+    --mount type=bind,source="$REPO_ROOT",target=/workspace \
+    "$DEV_TAG"

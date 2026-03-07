@@ -18,7 +18,11 @@
 - [x] setup.sh step 1 replaced by parcel -v file sync
 
 ## Up next (in order)
-- [ ] setup.sh step 6 (devbox bin symlinks) → replace with proviso
+- [x] setup.sh step 6 (devbox bin symlinks) → trashed for now
+- [x] setup.sh steps 2-4 (fisher/vim-plug/lazy.nvim installs) → trashed for now
+- [ ] fisher self-bootstrap: add fisher install to fish config so plugins install on first shell open
+- [ ] vim-plug self-bootstrap: add plug.vim download + PlugInstall to .vimrc on first vim open
+- [ ] lazy.nvim self-bootstrap: already works if bootstrap snippet is in init.lua (verify)
 - [ ] ManifestLoader: produce SourceProvision + FileProvision (not just PackageProvision)
 - [ ] CLI: proviso sync, proviso status
 - [ ] appendToPath on SourceProvision  # deferred: runtime PATH mutation → env var scope

@@ -35,32 +35,22 @@ ENV PATH="/root/.cargo/bin:${PATH}"
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip${PYTHON_VERSION} install uv yq httpie
 
-# ── Step 5: Nushell (heaviest, own layer) ────────────────────────────────────
+# ── Step 5: Bootstrap proviso (drives remaining installs) ────────────────────
+COPY pyproject.toml /opt/proviso/
+COPY src/ /opt/proviso/src/
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip${PYTHON_VERSION} install /opt/proviso
+
+COPY .devcontainer/config/provisions/ /tmp/provisions/
+
+# ── Step 6: Nushell (own layer — needs /etc/shells registration) ─────────────
 RUN --mount=type=cache,target=/root/.cargo/registry \
     --mount=type=cache,target=/root/.cargo/git \
     cargo install --locked --root /usr/local nu \
     && echo /usr/local/bin/nu >> /etc/shells
 
-# ── Step 6: Cargo tools (sequential — reliable) ─────────────────────────────
+# ── Step 7: All other tools via parcel (cargo + go + dnf from conf) ──────────
 RUN --mount=type=cache,target=/root/.cargo/registry \
     --mount=type=cache,target=/root/.cargo/git \
-    for crate in \
-        starship fd-find eza bat broot \
-        sd git-delta procs du-dust \
-        gitui xh zellij atuin tealdeer \
-        tokei just; \
-    do \
-        echo "Installing ${crate}..." \
-        && cargo install --locked --root /usr/local "${crate}" \
-        && echo "✓ ${crate}" \
-        || echo "✗ ${crate} FAILED"; \
-    done
-
-# ── Step 7: Go tools ────────────────────────────────────────────────────────
-RUN --mount=type=cache,target=/go-build/pkg/mod \
-    GOPATH=/go-build GOBIN=/usr/local/bin \
-    go install github.com/jesseduffield/lazygit@latest \
-    && GOPATH=/go-build GOBIN=/usr/local/bin \
-       go install github.com/muesli/duf@latest \
-    && GOPATH=/go-build GOBIN=/usr/local/bin \
-       go install github.com/direnv/direnv@latest
+    --mount=type=cache,target=/go-build/pkg/mod \
+    parcel -vv -m /tmp/provisions/modern-linux-utils.conf package install
