@@ -12,8 +12,7 @@ step() { echo ""; echo "━━━ $* ━━━"; }
 
 # ── 1. Dotfile symlinks (managed by proviso) ─────────────────────────────────
 step "Linking configs"
-# this looks uper hardcoded.. which is not neccasry
-uv run parcel -m /workspace/.devcontainer/config/provisions/dotfiles.conf file sync
+uv run parcel -m /workspace/.devcontainer/config/manifest.conf file sync
 echo "  configs linked"
 
 # ── 2. Fisher + fish plugins ──────────────────────────────────────────────────

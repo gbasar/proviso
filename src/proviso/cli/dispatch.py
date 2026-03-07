@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from proviso.actions.file_sync import FileSync
+from proviso.manifest.scanner import ManifestScanner
 from proviso.markup import create_default_registry
 from proviso.provisions.models import FileProvision, PackageProvision, SourceProvision
 from proviso.provisions.registry import ProvisionRegistry
@@ -32,8 +33,15 @@ class Dispatcher:
         self._provisions = ProvisionRegistry()
 
     def _load(self) -> None:
-        if self._manifest_path.exists():
-            self._provisions.load_file(self._manifest_path, self._markup)
+        if not self._manifest_path.exists():
+            return
+        data = self._markup.read_file(self._manifest_path)
+        if "PROVISION_LIST" in data:
+            scanner = ManifestScanner(self._markup)
+            for provision in scanner.scan(self._manifest_path):
+                self._provisions._provisions[provision.name] = provision
+        else:
+            self._provisions.load_dict(data)
 
     def run(
         self,
