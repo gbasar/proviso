@@ -67,6 +67,7 @@ else
     docker buildx build \
         "${cache_flags[@]}" \
         --build-arg BASE_IMAGE="$BASE_IMAGE" \
+        --progress=plain \
         --load \
         -f "$REPO_ROOT/Dockerfile.tools" \
         -t "$TOOLS_TAG" \

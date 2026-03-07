@@ -29,7 +29,9 @@ RUN dnf install -y --allowerasing \
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
     | sh -s -- -y --default-toolchain stable \
     && echo 'source /root/.cargo/env' >> /root/.bashrc
-ENV PATH="/root/.cargo/bin:${PATH}"
+ENV PATH="/root/.cargo/bin:${PATH}" \
+    OPENSSL_NO_VENDOR=1 \
+    OPENSSL_DIR=/usr
 
 # ── Step 4: pip tools ───────────────────────────────────────────────────────
 RUN --mount=type=cache,target=/root/.cache/pip \
