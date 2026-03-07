@@ -20,6 +20,13 @@ make measured progress each day we need to work together in short iterations of:
      - List the step
      - Ask if you shoudl begin, 
      - Ask if I need to review
+- 
+## Troubleshotoing: 
+ - State up to 3 reasons something may be broken as well as any eividence
+ - is there a simple commadn you could run toprove it? If so, do it
+ - What will the test be to prove your fix has worked, lets do it
+ -  rereun build/ test
+taskm to prove it (example run a termiunal commad)
 
 ## Prime directives in order of importnace
 

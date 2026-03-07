@@ -81,11 +81,10 @@ else
 fi
 
 # ── Step 2: Build the dev container (fast — no cargo/go compiles here) ───────
+
 banner "Building dev container image (fast)"
-docker buildx build \
-    "${cache_flags[@]}" \
+docker build \
     --build-arg TOOLS_IMAGE="$TOOLS_TAG" \
-    --load \
     -f "$REPO_ROOT/Dockerfile.devcontainer" \
     -t "$DEV_TAG" \
     "$REPO_ROOT"
