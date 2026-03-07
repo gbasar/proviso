@@ -55,4 +55,5 @@ RUN --mount=type=cache,target=/root/.cargo/registry \
 RUN --mount=type=cache,target=/root/.cargo/registry \
     --mount=type=cache,target=/root/.cargo/git \
     --mount=type=cache,target=/go-build/pkg/mod \
-    parcel -vv -m /tmp/provisions/modern-linux-utils.conf package install
+    parcel -vv --log-file /var/log/parcel-install.log \
+        -m /tmp/provisions/modern-linux-utils.conf package install
