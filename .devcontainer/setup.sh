@@ -10,22 +10,10 @@ CONFIG_DIR="$SCRIPT_DIR/config"
 
 step() { echo ""; echo "━━━ $* ━━━"; }
 
-# ── 1. Symlink all configs from the repo into $HOME ──────────────────────────
+# ── 1. Dotfile symlinks (managed by proviso) ─────────────────────────────────
 step "Linking configs"
-
-mkdir -p \
-    ~/.config/fish/functions \
-    ~/.config/nushell \
-    ~/.config/nvim \
-    ~/.vim/autoload
-
-ln -sf "$CONFIG_DIR/starship.toml"          ~/.config/starship.toml
-ln -sf "$CONFIG_DIR/fish/config.fish"       ~/.config/fish/config.fish
-ln -sf "$CONFIG_DIR/nushell/config.nu"      ~/.config/nushell/config.nu
-ln -sf "$CONFIG_DIR/nushell/env.nu"         ~/.config/nushell/env.nu
-ln -sf "$CONFIG_DIR/nvim/init.lua"          ~/.config/nvim/init.lua
-ln -sf "$CONFIG_DIR/vim/.vimrc"             ~/.vimrc
-
+# this looks uper hardcoded.. which is not neccasry
+uv run parcel -m /workspace/.devcontainer/config/provisions/dotfiles.conf file sync
 echo "  configs linked"
 
 # ── 2. Fisher + fish plugins ──────────────────────────────────────────────────

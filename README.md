@@ -26,38 +26,45 @@ PROVISION_LIST = [
 
 ---
 
-## What it does
+## Examples
 
-Declare your provisions in a HOCON manifest. Run `proviso sync`. Done.
+### Packages
 
 ```hocon
 dev-tools {
-
-  # PackageProvision — installed via dnf / cargo / pip / go
-  ripgrep { install { method = cargo, package = ripgrep  } }
-  fd      { install { method = cargo, package = fd-find  } }
-  jq      { install { method = dnf,   package = jq       } }
-
-  # SourceProvision — git repo, kept in sync
-  gregs-search {
-    repo   = "git@github.com:greg/search.git"
-    target = "/opt/gregs-search"
-  }
-
+  ripgrep { install { method = cargo, package = ripgrep } }
+  fd      { install { method = cargo, package = fd-find } }
+  jq      { install { method = dnf,   package = jq      } }
 }
+```
 
+### Source repos
+
+```hocon
+repos {
+  custom-search {
+    repo         = "git@github.com:acme/search.git"
+    target       = "/opt/custom-search"
+    appendToPath = ["search/build/output/bin"]
+  }
+}
+```
+
+### Dotfiles (bind + symlink)
+
+```hocon
 dotfiles {
 
   # BOUND first — grafts your host dotfiles folder into the container.
   # Everything below depends on this path existing.
   dot_files_folder {
-    origin = "~/.proviso/dotfiles"   # on your host (Windows, Mac, Linux)
-    path   = "/proviso/dotfiles"     # where it appears inside the container
+    origin = "~/.proviso/dotfiles"  # on your host (Windows, Mac, Linux)
+    path   = "/proviso/dotfiles"    # where it appears inside the container
     mode   = BOUND
   }
 
   # SYMLINK — places configs where apps expect them.
-  # origin must use the container path (/proviso/dotfiles), not the host path.
+  # origin must use the container path, not the host path.
   bashrc {
     origin = "/proviso/dotfiles/.bashrc"
     path   = "~/.bashrc"
@@ -72,6 +79,8 @@ dotfiles {
 }
 ```
 
+---
+
 ## Under the hood
 
 | Provision | Mode | What proviso runs |
@@ -85,6 +94,8 @@ dotfiles {
 > `BOUND` must run before any `SYMLINK` that references its path — a symlink to a missing path is a dead pointer.
 
 Provisions are immutable Pydantic models. Actions are composable pipelines. Providers are injected — swap `DnfProvider` for `AptProvider` and the same manifest works on Ubuntu.
+
+---
 
 ## Dev container
 

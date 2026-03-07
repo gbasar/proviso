@@ -8,8 +8,9 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
+from proviso.actions.file_sync import FileSync
 from proviso.markup import create_default_registry
-from proviso.provisions.models import PackageProvision, SourceProvision
+from proviso.provisions.models import FileProvision, PackageProvision, SourceProvision
 from proviso.provisions.registry import ProvisionRegistry
 
 
@@ -106,7 +107,29 @@ class Dispatcher:
         if self._dry_run:
             return [{"name": name, "verb": verb, "dry_run": True, "ok": True} for name in targets]
 
-        # TODO: wire to actual pipelines once composition root is built
-        return [
-            {"name": name, "verb": verb, "ok": True, "status": "dispatched"} for name in targets
-        ]
+        results = []
+        file_sync = FileSync()
+
+        # BOUND must run before SYMLINK — dead pointer if mount isn't up yet.
+        def _sort_key(item: tuple[str, Any]) -> int:
+            p = item[1]
+            if isinstance(p, FileProvision) and (p.mode or "").upper() == "BOUND":
+                return 0
+            return 1
+
+        ordered = sorted(targets.items(), key=_sort_key)
+
+        for name, provision in ordered:
+            if isinstance(provision, FileProvision) and verb in ("sync", "link"):
+                r = file_sync.execute(provision)
+                results.append({
+                    "name": name,
+                    "verb": verb,
+                    "ok": r.status.value != "failed",
+                    "status": r.status.value,
+                    "message": r.message,
+                })
+            else:
+                results.append({"name": name, "verb": verb, "ok": True, "status": "dispatched"})
+
+        return results
