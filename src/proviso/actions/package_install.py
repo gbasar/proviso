@@ -1,6 +1,6 @@
-"""PackageInstall action — installs or updates any package resource.
+"""PackageInstall action — installs or updates any package provision.
 
-Accepts PackageResource. Resolves provider by name,
+Accepts PackageProvision. Resolves provider by name,
 delegates the actual work. Idempotent — checks status first.
 """
 
@@ -9,7 +9,7 @@ from __future__ import annotations
 from proviso.actions.protocol import ActionResult, ActionStatus, ShapeMismatchError
 from proviso.providers.protocol import PackageStatus
 from proviso.providers.registry import ProviderRegistry
-from proviso.resources.models import PackageResource
+from proviso.provisions.models import PackageProvision
 
 
 class PackageInstall:
@@ -22,17 +22,17 @@ class PackageInstall:
     def action_name(self) -> str:
         return "package-install"
 
-    def execute(self, resource: PackageResource) -> ActionResult:
-        if not isinstance(resource, PackageResource):
+    def execute(self, provision: PackageProvision) -> ActionResult:
+        if not isinstance(provision, PackageProvision):
             raise ShapeMismatchError(
-                f"{self.action_name} accepts PackageResource, got {type(resource).__name__}"
+                f"{self.action_name} accepts PackageProvision, got {type(provision).__name__}"
             )
 
-        provider = self._providers.get(resource.provider)
-        name = resource.name
-        package = resource.package or name
+        provider = self._providers.get(provision.provider)
+        name = provision.name
+        package = provision.package or name
 
-        if resource.get_latest:
+        if provision.get_latest:
             result = provider.update(package)
         else:
             current = provider.status(package)

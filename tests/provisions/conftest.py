@@ -1,11 +1,11 @@
-"""Shared fixtures for resource tests."""
+"""Shared fixtures for provision tests."""
 
 from __future__ import annotations
 
 SAMPLE_MANIFEST: dict = {
-    "resources": {
+    "provisions": {
         "jq": {
-            "resource_type": "package",
+            "provision_type": "package",
             "provider": "dnf",
             "destination": "/usr/bin",
             "links": ["/usr/local/bin/jq"],
@@ -13,12 +13,12 @@ SAMPLE_MANIFEST: dict = {
             "schedule": "0 1 * * *",
         },
         "requests": {
-            "resource_type": "package",
+            "provision_type": "package",
             "provider": "pip",
             "version": "2.31.0",
         },
         "my-app": {
-            "resource_type": "source",
+            "provision_type": "source",
             "repo": "git@github.com:myorg/my-app.git",
             "target": "/opt/my-app",
             "branch": "main",
@@ -27,12 +27,12 @@ SAMPLE_MANIFEST: dict = {
             "get_latest": True,
         },
         "trading-hosts": {
-            "resource_type": "file",
+            "provision_type": "file",
             "path": "/etc/proviso/hosts/trading.hocon",
             "tags": ["trading", "production"],
         },
         "deploy-key": {
-            "resource_type": "file",
+            "provision_type": "file",
             "path": "~/.ssh/deploy_ed25519",
             "tags": ["ssh", "credentials"],
         },

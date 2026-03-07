@@ -1,6 +1,6 @@
 """Dispatcher — the glue between CLI and domain.
 
-Load manifest → select resources → dispatch through actions/pipelines.
+Load manifest → select provisions → dispatch through actions/pipelines.
 """
 
 from __future__ import annotations
@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Any
 
 from proviso.markup import create_default_registry
-from proviso.resources.models import PackageResource, SourceResource
-from proviso.resources.registry import ResourceRegistry
+from proviso.provisions.models import PackageProvision, SourceProvision
+from proviso.provisions.registry import ProvisionRegistry
 
 
 class Dispatcher:
@@ -28,32 +28,30 @@ class Dispatcher:
         self._format = output_format
         self._dry_run = dry_run
         self._markup = create_default_registry()
-        self._resources = ResourceRegistry()
+        self._provisions = ProvisionRegistry()
 
     def _load(self) -> None:
         if self._manifest_path.exists():
-            self._resources.load_file(self._manifest_path, self._markup)
+            self._provisions.load_file(self._manifest_path, self._markup)
 
     def run(
         self,
-        resource_type: str | None,
+        provision_type: str | None,
         name: str | None,
         verb: str,
         stdin_names: list[str] | None = None,
     ) -> list[dict[str, Any]]:
         self._load()
 
-        # Resolve target resources
         if stdin_names:
-            targets = {n: self._resources.get(n) for n in stdin_names}
+            targets = {n: self._provisions.get(n) for n in stdin_names}
         elif name:
-            targets = {name: self._resources.get(name)}
-        elif resource_type:
-            targets = self._resources.filter_by_type(resource_type)
+            targets = {name: self._provisions.get(name)}
+        elif provision_type:
+            targets = self._provisions.filter_by_type(provision_type)
         else:
-            targets = self._resources.resources
+            targets = self._provisions.provisions
 
-        # Dispatch verb
         if verb == "list":
             return self._list(targets)
         if verb == "status":
@@ -67,7 +65,7 @@ class Dispatcher:
 
     def _list(self, targets: dict[str, Any]) -> list[dict[str, Any]]:
         return [
-            {"name": name, "type": r.resource_type, "schedule": r.schedule}
+            {"name": name, "type": r.provision_type, "schedule": r.schedule}
             for name, r in targets.items()
         ]
 
@@ -77,7 +75,7 @@ class Dispatcher:
             results.append(
                 {
                     "name": name,
-                    "type": r.resource_type,
+                    "type": r.provision_type,
                     "schedule": r.schedule,
                     "tags": list(r.tags),
                 }
@@ -89,15 +87,15 @@ class Dispatcher:
         for name, r in targets.items():
             entry: dict[str, Any] = {
                 "name": name,
-                "type": r.resource_type,
+                "type": r.provision_type,
                 "schedule": r.schedule,
                 "tags": list(r.tags),
             }
-            if isinstance(r, PackageResource):
+            if isinstance(r, PackageProvision):
                 entry["provider"] = r.provider
                 entry["version"] = r.version
                 entry["get_latest"] = r.get_latest
-            elif isinstance(r, SourceResource):
+            elif isinstance(r, SourceProvision):
                 entry["repo"] = r.repo
                 entry["target"] = str(r.target)
                 entry["branch"] = r.branch
@@ -109,7 +107,6 @@ class Dispatcher:
             return [{"name": name, "verb": verb, "dry_run": True, "ok": True} for name in targets]
 
         # TODO: wire to actual pipelines once composition root is built
-        # For now, return pending status
         return [
             {"name": name, "verb": verb, "ok": True, "status": "dispatched"} for name in targets
         ]

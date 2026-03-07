@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from proviso.manifest.loader import ManifestError, ManifestLoader
-from proviso.resources.models import PackageResource
+from proviso.provisions.models import PackageProvision
 
 # Path to the real catalog (repo-relative from test runner cwd)
 CONF_PATH = Path(__file__).parent.parent.parent / ".devcontainer" / "config" / "modern-linux-utils.conf"
@@ -67,7 +67,7 @@ class TestRealManifest:
     def test_produces_package_resources(self) -> None:
         loader = ManifestLoader()
         resources = loader.load(CONF_PATH)
-        assert all(isinstance(r, PackageResource) for r in resources)
+        assert all(isinstance(r, PackageProvision) for r in resources)
 
     def test_cross_references_skipped(self) -> None:
         """The delta cross-reference in git-tools must not appear twice."""

@@ -1,4 +1,4 @@
-"""Manifest loader — reads the modern-linux-utils.conf catalog into typed resources.
+"""Manifest loader — reads the modern-linux-utils.conf catalog into typed provisions.
 
 The .conf format is a HOCON file with a nested category → tool structure:
 
@@ -15,9 +15,9 @@ The .conf format is a HOCON file with a nested category → tool structure:
       }
     }
 
-Produced resources
-------------------
-All entries map to PackageResource.  The loader normalises the nested structure:
+Produced provisions
+-------------------
+All entries map to PackageProvision.  The loader normalises the nested structure:
 
     name     = tool key (e.g. "fd", "ripgrep")
     provider = install.method (e.g. "cargo", "dnf")
@@ -43,7 +43,7 @@ from pathlib import Path
 from typing import Any
 
 from proviso.markup.hocon import HoconAdapter
-from proviso.resources.models import PackageResource
+from proviso.provisions.models import PackageProvision
 
 _hocon = HoconAdapter()
 
@@ -55,32 +55,32 @@ class ManifestError(ValueError):
 
 
 class ManifestLoader:
-    """Loads a modern-linux-utils.conf catalog into PackageResource objects."""
+    """Loads a modern-linux-utils.conf catalog into PackageProvision objects."""
 
-    def load(self, path: Path, *, include_disabled: bool = False) -> list[PackageResource]:
+    def load(self, path: Path, *, include_disabled: bool = False) -> list[PackageProvision]:
         """Load from a .conf file on disk."""
         data = _hocon.read_file(path)
         return self._parse(data, include_disabled=include_disabled)
 
-    def load_string(self, content: str, *, include_disabled: bool = False) -> list[PackageResource]:
+    def load_string(self, content: str, *, include_disabled: bool = False) -> list[PackageProvision]:
         """Load from a HOCON string (useful for tests)."""
         data = _hocon.read_string(content)
         return self._parse(data, include_disabled=include_disabled)
 
     # ── internals ────────────────────────────────────────────────────────────
 
-    def _parse(self, data: dict[str, Any], *, include_disabled: bool) -> list[PackageResource]:
-        resources: list[PackageResource] = []
+    def _parse(self, data: dict[str, Any], *, include_disabled: bool) -> list[PackageProvision]:
+        provisions: list[PackageProvision] = []
         for category, tools in data.items():
             if not isinstance(tools, dict):
                 continue
             for tool_name, tool_data in tools.items():
                 if not isinstance(tool_data, dict):
                     continue
-                resource = self._parse_tool(tool_name, category, tool_data, include_disabled)
-                if resource is not None:
-                    resources.append(resource)
-        return resources
+                provision = self._parse_tool(tool_name, category, tool_data, include_disabled)
+                if provision is not None:
+                    provisions.append(provision)
+        return provisions
 
     def _parse_tool(
         self,
@@ -88,7 +88,7 @@ class ManifestLoader:
         category: str,
         data: dict[str, Any],
         include_disabled: bool,
-    ) -> PackageResource | None:
+    ) -> PackageProvision | None:
         # Cross-reference entries (e.g. delta { see = "text-processing.delta" })
         if "see" in data and len(data) == 1:
             return None
@@ -120,18 +120,15 @@ class ManifestLoader:
                 f"Tool '{tool_name}': install block is missing 'package'"
             )
 
-        # Tags — HOCON gives us a list, model wants a tuple
         raw_tags: list[str] = data.get("tags") or []
 
-        # Everything that isn't a core model field goes into metadata
         metadata: dict[str, Any] = {"category": category}
         for key in ("description", "replaces", "priority", "grade", "enabled", "help", "note"):
             if key in data:
                 metadata[key] = data[key]
 
-        # Only set package when it differs from the tool name — keeps repr clean
         install_package = str(package)
-        return PackageResource(
+        return PackageProvision(
             name=tool_name,
             provider=str(method),
             package=install_package if install_package != tool_name else None,

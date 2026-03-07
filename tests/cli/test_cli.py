@@ -13,27 +13,27 @@ from proviso.cli.output import format_output
 from proviso.markup import create_default_registry
 
 SAMPLE_MANIFEST: dict[str, Any] = {
-    "resources": {
+    "provisions": {
         "jq": {
-            "resource_type": "package",
+            "provision_type": "package",
             "provider": "dnf",
             "destination": "/usr/bin",
             "get_latest": True,
             "schedule": "0 1 * * *",
         },
         "requests": {
-            "resource_type": "package",
+            "provision_type": "package",
             "provider": "pip",
             "version": "2.31.0",
         },
         "my-app": {
-            "resource_type": "source",
+            "provision_type": "source",
             "repo": "git@github.com:org/app.git",
             "target": "/opt/app",
             "schedule": "0 */12 * * *",
         },
         "trading-hosts": {
-            "resource_type": "file",
+            "provision_type": "file",
             "path": "/etc/proviso/hosts.conf",
             "tags": ["trading"],
         },
@@ -53,24 +53,24 @@ class TestParseCommand:
     def test_full_command(self) -> None:
         result = parse_command(["cat", "package", "jq", "install"])
         assert result["catalog"] == "cat"
-        assert result["resource_type"] == "package"
+        assert result["provision_type"] == "package"
         assert result["name"] == "jq"
         assert result["verb"] == "install"
 
     def test_list_by_type(self) -> None:
         result = parse_command(["cat", "package", "list"])
-        assert result["resource_type"] == "package"
+        assert result["provision_type"] == "package"
         assert result["verb"] == "list"
         assert result["name"] is None
 
     def test_list_all(self) -> None:
         result = parse_command(["cat", "list"])
         assert result["verb"] == "list"
-        assert result["resource_type"] is None
+        assert result["provision_type"] is None
 
     def test_source_sync(self) -> None:
         result = parse_command(["cat", "source", "my-app", "sync"])
-        assert result["resource_type"] == "source"
+        assert result["provision_type"] == "source"
         assert result["name"] == "my-app"
         assert result["verb"] == "sync"
 
@@ -80,7 +80,7 @@ class TestParseCommand:
 
     def test_status_by_name(self) -> None:
         result = parse_command(["cat", "file", "trading-hosts", "status"])
-        assert result["resource_type"] == "file"
+        assert result["provision_type"] == "file"
         assert result["name"] == "trading-hosts"
         assert result["verb"] == "status"
 
@@ -88,7 +88,7 @@ class TestParseCommand:
 class TestDispatcher:
     def test_list_all(self, manifest_file: Path) -> None:
         d = Dispatcher(manifest_path=manifest_file)
-        results = d.run(resource_type=None, name=None, verb="list")
+        results = d.run(provision_type=None, name=None, verb="list")
         assert len(results) == 4
         names = {r["name"] for r in results}
         assert "jq" in names
@@ -96,42 +96,42 @@ class TestDispatcher:
 
     def test_list_by_type(self, manifest_file: Path) -> None:
         d = Dispatcher(manifest_path=manifest_file)
-        results = d.run(resource_type="package", name=None, verb="list")
+        results = d.run(provision_type="package", name=None, verb="list")
         assert len(results) == 2
         names = {r["name"] for r in results}
         assert names == {"jq", "requests"}
 
     def test_info_single(self, manifest_file: Path) -> None:
         d = Dispatcher(manifest_path=manifest_file)
-        results = d.run(resource_type=None, name="jq", verb="info")
+        results = d.run(provision_type=None, name="jq", verb="info")
         assert len(results) == 1
         assert results[0]["provider"] == "dnf"
 
     def test_status(self, manifest_file: Path) -> None:
         d = Dispatcher(manifest_path=manifest_file)
-        results = d.run(resource_type=None, name="trading-hosts", verb="status")
+        results = d.run(provision_type=None, name="trading-hosts", verb="status")
         assert results[0]["tags"] == ["trading"]
 
     def test_dry_run(self, manifest_file: Path) -> None:
         d = Dispatcher(manifest_path=manifest_file, dry_run=True)
-        results = d.run(resource_type=None, name="jq", verb="install")
+        results = d.run(provision_type=None, name="jq", verb="install")
         assert results[0]["dry_run"] is True
         assert results[0]["ok"] is True
 
     def test_action_dispatched(self, manifest_file: Path) -> None:
         d = Dispatcher(manifest_path=manifest_file)
-        results = d.run(resource_type=None, name="jq", verb="install")
+        results = d.run(provision_type=None, name="jq", verb="install")
         assert results[0]["status"] == "dispatched"
 
     def test_unknown_verb(self, manifest_file: Path) -> None:
         d = Dispatcher(manifest_path=manifest_file)
-        results = d.run(resource_type=None, name=None, verb="explode")
+        results = d.run(provision_type=None, name=None, verb="explode")
         assert results[0]["ok"] is False
 
     def test_stdin_names(self, manifest_file: Path) -> None:
         d = Dispatcher(manifest_path=manifest_file)
         results = d.run(
-            resource_type=None,
+            provision_type=None,
             name=None,
             verb="list",
             stdin_names=["jq", "my-app"],
@@ -142,7 +142,7 @@ class TestDispatcher:
 
     def test_missing_manifest(self, tmp_path: Path) -> None:
         d = Dispatcher(manifest_path=tmp_path / "nope.conf")
-        results = d.run(resource_type=None, name=None, verb="list")
+        results = d.run(provision_type=None, name=None, verb="list")
         assert len(results) == 0
 
 

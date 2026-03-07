@@ -1,4 +1,4 @@
-"""Parcel CLI — load manifest, select resources, dispatch through pipelines.
+"""Parcel CLI — load manifest, select provisions, dispatch through pipelines.
 
 Usage:
     parcel cat package list
@@ -23,7 +23,7 @@ from proviso.cli.output import format_output
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="parcel",
-        description="Universal declarative resource lifecycle manager.",
+        description="Universal declarative provision lifecycle manager.",
     )
     parser.add_argument(
         "-m",
@@ -47,7 +47,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--stdin",
         action="store_true",
-        help="Read resource names from stdin",
+        help="Read provision names from stdin",
     )
     parser.add_argument(
         "--dry-run",
@@ -55,7 +55,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Show what would happen without doing it",
     )
 
-    # Positional: cat <type> [name] [verb] [--flags]
     parser.add_argument("command", nargs="*", help="cat <type> [name] [verb]")
 
     return parser
@@ -65,7 +64,7 @@ def parse_command(args: list[str]) -> dict[str, str | None]:
     """Parse positional args into catalog, type, name, verb."""
     result: dict[str, str | None] = {
         "catalog": None,
-        "resource_type": None,
+        "provision_type": None,
         "name": None,
         "verb": None,
     }
@@ -73,7 +72,6 @@ def parse_command(args: list[str]) -> dict[str, str | None]:
     if not args:
         return result
 
-    # First arg should be "cat" (catalog)
     if args[0] == "cat":
         result["catalog"] = "cat"
         args = args[1:]
@@ -81,13 +79,11 @@ def parse_command(args: list[str]) -> dict[str, str | None]:
     if not args:
         return result
 
-    # Known resource types
     types = {"package", "source", "file", "host"}
     verbs = {"list", "install", "uninstall", "sync", "status", "info", "connect", "link"}
 
-    # Next could be a type or "list" (for all types)
     if args[0] in types:
-        result["resource_type"] = args[0]
+        result["provision_type"] = args[0]
         args = args[1:]
     elif args[0] in verbs:
         result["verb"] = args[0]
@@ -96,7 +92,6 @@ def parse_command(args: list[str]) -> dict[str, str | None]:
     if not args:
         return result
 
-    # Next could be a name or a verb
     if args[0] in verbs:
         result["verb"] = args[0]
         args = args[1:]
@@ -107,7 +102,6 @@ def parse_command(args: list[str]) -> dict[str, str | None]:
     if not args:
         return result
 
-    # Remaining should be verb
     if args[0] in verbs:
         result["verb"] = args[0]
 
@@ -121,7 +115,6 @@ def main(argv: list[str] | None = None) -> int:
     cmd = parse_command(args.command)
     manifest_path = Path(args.manifest)
 
-    # Read stdin names if --stdin
     stdin_names: list[str] = []
     if args.stdin and not sys.stdin.isatty():
         stdin_names = [line.strip() for line in sys.stdin if line.strip()]
@@ -135,7 +128,7 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         results = dispatcher.run(
-            resource_type=cmd["resource_type"],
+            provision_type=cmd["provision_type"],
             name=cmd["name"],
             verb=cmd["verb"] or "list",
             stdin_names=stdin_names,
