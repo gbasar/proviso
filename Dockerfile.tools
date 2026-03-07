@@ -36,7 +36,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip${PYTHON_VERSION} install uv yq httpie
 
 # ── Step 5: Bootstrap proviso (drives remaining installs) ────────────────────
-COPY pyproject.toml /opt/proviso/
+COPY pyproject.toml README.md /opt/proviso/
 COPY src/ /opt/proviso/src/
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip${PYTHON_VERSION} install /opt/proviso
