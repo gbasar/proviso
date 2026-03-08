@@ -113,8 +113,28 @@ echo ""
 if [[ "$TRACE" == "true" ]]; then
     TOOLS_TAG="$TOOLS_TAG" bash "$REPO_ROOT/scripts/trace.sh"
 else
+    # ── Detect display: Wayland > X11 > none ─────────────────────────────────
+    display_args=()
+    if [[ -n "${WAYLAND_DISPLAY:-}" && -n "${XDG_RUNTIME_DIR:-}" ]]; then
+        display_args+=(
+            -e WAYLAND_DISPLAY="$WAYLAND_DISPLAY"
+            -e XDG_RUNTIME_DIR=/run/user/host
+            --mount "type=bind,source=${XDG_RUNTIME_DIR},target=/run/user/host"
+        )
+        echo "  Display: Wayland ($WAYLAND_DISPLAY)"
+    elif [[ -n "${DISPLAY:-}" ]]; then
+        display_args+=(
+            -e DISPLAY="$DISPLAY"
+            --mount "type=bind,source=/tmp/.X11-unix,target=/tmp/.X11-unix"
+        )
+        echo "  Display: X11 ($DISPLAY)"
+    else
+        echo "  Display: none (headless)"
+    fi
+
     docker run -it --rm \
         --mount type=bind,source="$REPO_ROOT",target=/workspace \
         --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
+        "${display_args[@]}" \
         "$DEV_TAG"
 fi

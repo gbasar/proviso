@@ -12,6 +12,9 @@ wheels/
 # Build cache lives at ~/.cache/devcontainer/ (universal, not project-local)
 # Nothing to gitignore here — build.sh writes nothing into the project directory
 
+# Viztracer output
+trace-*.json
+
 # OS / IDE
 .DS_Store
 .idea/

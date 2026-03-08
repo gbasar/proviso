@@ -17,8 +17,19 @@
   // Edit on your Mac → container sees it instantly. No rebuild needed.
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
   "mounts": [
-    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
+    // X11 socket (XQuartz on Mac, Xorg on Linux)
+    "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,optional=true",
+    // Wayland socket (Linux only — path is $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY)
+    "source=${localEnv:XDG_RUNTIME_DIR},target=/run/user/host,type=bind,optional=true"
   ],
+
+  // ── Display passthrough (X11 or Wayland — whichever the host uses) ─────────
+  "containerEnv": {
+    "DISPLAY": "${localEnv:DISPLAY}",
+    "WAYLAND_DISPLAY": "${localEnv:WAYLAND_DISPLAY}",
+    "XDG_RUNTIME_DIR": "/run/user/host"
+  },
   "workspaceFolder": "/workspace",
 
   // ── VS Code extensions (installed inside the container) ──────────────────
