@@ -7,7 +7,7 @@
       // ── Point at your pre-built tools image (from build.sh --push-tools) ──
       // "TOOLS_IMAGE": "registry.corp.com/dev-tools:latest"
       "TOOLS_IMAGE": "proviso-dev-tools:latest",
-      "USERNAME": "devuser",
+      "USERNAME": "${localEnv:USER}",
       "USER_UID": "1000"
     }
   },
