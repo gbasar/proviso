@@ -103,6 +103,8 @@ fi
 banner "Building dev container image (fast)"
 docker build \
     --build-arg TOOLS_IMAGE="$TOOLS_TAG" \
+    --build-arg USERNAME="$(whoami)" \
+    --build-arg USER_UID="$(id -u)" \
     -f "$REPO_ROOT/Dockerfile.devcontainer" \
     -t "$DEV_TAG" \
     "$REPO_ROOT"
