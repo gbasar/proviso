@@ -17,7 +17,7 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Annotated, Any, Literal, Protocol, runtime_checkable
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 # --- Common Protocol (wide shape) ---
@@ -42,6 +42,15 @@ class ProvisionKind(StrEnum):
     FILE = "file"
 
 
+# --- Symlink pair ---
+
+class Symlink(BaseModel):
+    model_config = {"frozen": True, "populate_by_name": True}
+
+    src: Path = Field(alias="from")
+    dest: Path = Field(alias="to")
+
+
 # --- Frozen base ---
 
 class _ProvisionBase(BaseModel):
@@ -52,6 +61,9 @@ class _ProvisionBase(BaseModel):
     schedule: str | None = None
     tags: tuple[str, ...] = ()
     metadata: dict[str, Any] = Field(default_factory=dict)
+    symlinks: tuple[Symlink, ...] = ()
+    pre_install: str | None = None
+    post_install: str | None = None
 
 
 # --- Concrete provision models ---
@@ -60,13 +72,18 @@ class PackageProvision(_ProvisionBase):
     """Any installable package — system or language-level."""
 
     provision_type: Literal[ProvisionKind.PACKAGE] = ProvisionKind.PACKAGE
-    provider: str                  # "dnf", "apt", "brew", "pip", "cargo", "maven", "npm", "gem"
+    provider: str                  # "dnf", "apt", "brew", "pip", "cargo", "go", "file"
     package: str | None = None     # install identifier when it differs from name
+    loc: Path | None = None        # source path for method=file
     version: str | None = None
     destination: Path | None = None
-    links: tuple[Path, ...] = ()
     get_latest: bool = False
-    post_install: str | None = None  # shell command run after a successful install
+
+    @model_validator(mode="after")
+    def _file_method_requires_symlinks(self) -> "PackageProvision":
+        if self.provider == "file" and not self.symlinks:
+            raise ValueError("method=file requires at least one entry in symlinks")
+        return self
 
 
 class SourceProvision(_ProvisionBase):

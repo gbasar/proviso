@@ -34,3 +34,14 @@
 - [ ] CLI: proviso sync, proviso status
 - [ ] e2e test: real runtime, all provision types, npm provider + local Python HTTP server as fake registry, session-scoped Docker fixture (started once), explicit pass/fail per feature
 - [ ] appendToPath on SourceProvision  # deferred: runtime PATH mutation → env var scope
+
+## nice to have
+-pre and post install hooks for every provisonu type, also at file level,
+
+## While u were away claude.. i decided to
+
+### Ådd commands
+tree, 
+
+### aadd features
+docker in docker

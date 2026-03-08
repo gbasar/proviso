@@ -115,21 +115,21 @@ if [[ "$TRACE" == "true" ]]; then
 else
     # ── Detect display: Wayland > X11 > none ─────────────────────────────────
     display_args=()
-    if [[ -n "${WAYLAND_DISPLAY:-}" && -n "${XDG_RUNTIME_DIR:-}" ]]; then
+    if [[ -n "${WAYLAND_DISPLAY:-}" && -S "${XDG_RUNTIME_DIR:-}/${WAYLAND_DISPLAY:-}" ]]; then
         display_args+=(
             -e WAYLAND_DISPLAY="$WAYLAND_DISPLAY"
             -e XDG_RUNTIME_DIR=/run/user/host
             --mount "type=bind,source=${XDG_RUNTIME_DIR},target=/run/user/host"
         )
         echo "  Display: Wayland ($WAYLAND_DISPLAY)"
-    elif [[ -n "${DISPLAY:-}" ]]; then
+    elif [[ -n "${DISPLAY:-}" && -d /tmp/.X11-unix ]]; then
         display_args+=(
             -e DISPLAY="$DISPLAY"
             --mount "type=bind,source=/tmp/.X11-unix,target=/tmp/.X11-unix"
         )
         echo "  Display: X11 ($DISPLAY)"
     else
-        echo "  Display: none (headless)"
+        echo "  Display: none (headless — OrbStack handles GUI natively)"
     fi
 
     docker run -it --rm \

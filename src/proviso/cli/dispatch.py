@@ -6,6 +6,7 @@ Load manifest → select provisions → dispatch through actions/pipelines.
 from __future__ import annotations
 
 import sys
+import time
 from pathlib import Path
 from typing import IO, Any
 
@@ -168,6 +169,7 @@ class Dispatcher:
                 self._log(_V1, f"Provisioning {name}  [{provision.provider}: {provision.package or name}]")
             else:
                 self._log(_V1, f"Provisioning {name}")
+            t0 = time.monotonic()
             if isinstance(provision, FileProvision) and verb in ("sync", "link"):
                 r = file_sync.execute(provision)
             elif isinstance(provision, PackageProvision) and verb == "install":
@@ -177,6 +179,7 @@ class Dispatcher:
                 self._log(_V2, f"  DISPATCH {name}")
                 continue
 
+            elapsed = time.monotonic() - t0
             ok = r.status.value != "failed"
             results.append({
                 "name": name,
@@ -186,13 +189,13 @@ class Dispatcher:
                 "message": r.message,
             })
             if r.status.value == "failed":
-                msg = f"[proviso]   FAILED   {name}: {r.message}"
+                msg = f"[proviso]   FAILED   {name}: {r.message} ({elapsed:.1f}s)"
                 print(msg, file=sys.stderr)
                 if self._log_fh is not None:
                     print(msg, file=self._log_fh, flush=True)
             elif r.status.value == "skipped":
-                self._log(_V2, f"  SKIP     {name}: {r.message}")
+                self._log(_V2, f"  SKIP     {name}: {r.message} ({elapsed:.1f}s)")
             else:
-                self._log(_V1, f"  OK       {name}: {r.message}")
+                self._log(_V1, f"  OK       {name}: {r.message} ({elapsed:.1f}s)")
 
         return results
