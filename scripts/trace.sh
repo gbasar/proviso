@@ -21,34 +21,34 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TOOLS_TAG="${TOOLS_TAG:-proviso-dev-tools:latest}"
-PACKAGES_CONF=".devcontainer/config/provisions/modern-linux-utils.conf"
-DOTFILES_CONF=".devcontainer/config/provisions/dotfiles.conf"
+MANIFEST=".devcontainer/config/manifest.conf"
 
 echo ""
 echo "━━━ Tracing proviso under viztracer ━━━"
-echo "  Image: $TOOLS_TAG"
+echo "  Image:    $TOOLS_TAG"
+echo "  Manifest: $MANIFEST"
 echo ""
 
-echo "  [1/2] package install ($PACKAGES_CONF)"
+echo "  [1/2] package install"
 docker run --rm \
     --mount type=bind,source="$REPO_ROOT",target=/workspace \
     "$TOOLS_TAG" \
     viztracer --output_file /workspace/trace-packages.json -- \
         proviso -vv \
-            -m "/workspace/$PACKAGES_CONF" \
+            -m "/workspace/$MANIFEST" \
             package install
 
 echo ""
-echo "  [2/2] file sync ($DOTFILES_CONF)"
+echo "  [2/2] file sync"
 docker run --rm \
     --mount type=bind,source="$REPO_ROOT",target=/workspace \
     "$TOOLS_TAG" \
     viztracer --output_file /workspace/trace-dotfiles.json -- \
         proviso -vv \
-            -m "/workspace/$DOTFILES_CONF" \
+            -m "/workspace/$MANIFEST" \
             file sync
 
 echo ""
 echo "━━━ Done ━━━"
-echo "  trace-packages.json  →  viztracer $REPO_ROOT/trace-packages.json"
-echo "  trace-dotfiles.json  →  viztracer $REPO_ROOT/trace-dotfiles.json"
+echo "  trace-packages.json  →  vizviewer $REPO_ROOT/trace-packages.json"
+echo "  trace-dotfiles.json  →  vizviewer $REPO_ROOT/trace-dotfiles.json"

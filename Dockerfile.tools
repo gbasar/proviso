@@ -58,5 +58,13 @@ RUN --mount=type=cache,target=/root/.cargo/registry \
     --mount=type=cache,target=/root/.cargo/target \
     --mount=type=cache,target=/go-build/pkg/mod \
     CARGO_TARGET_DIR=/root/.cargo/target \
-    proviso -vv \
-        -m /tmp/provisions/modern-linux-utils.conf package install || true
+    proviso -vv -m /tmp/provisions/modern-linux-utils.conf package install || true
+
+# ── Step 7: IDE tooling (display libs, editors, IDE launchers) ────────────────
+# jetbrainsTb uses method=file with a host path — skipped at build time (no file present).
+# Install it manually via: parcel -m ide.conf jetbrainsTb install
+RUN --mount=type=cache,target=/root/.cargo/registry \
+    --mount=type=cache,target=/root/.cargo/git \
+    --mount=type=cache,target=/root/.cargo/target \
+    CARGO_TARGET_DIR=/root/.cargo/target \
+    proviso -vv -m /tmp/provisions/ide.conf package install || true

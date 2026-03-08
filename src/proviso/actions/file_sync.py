@@ -101,6 +101,14 @@ class FileSync:
         )
 
     def _bound(self, name: str, src: Path, dest: Path) -> ActionResult:
+        if not src.exists():
+            return ActionResult(
+                status=ActionStatus.SKIPPED,
+                action_name=self.action_name,
+                resource_name=name,
+                message=f"source absent, skipping ({src})",
+            )
+
         try:
             mounts = Path("/proc/mounts").read_text()
             if str(dest) in mounts:
