@@ -118,6 +118,8 @@ class PackageInstall:
         extract_dir.mkdir(parents=True, exist_ok=True)
 
         suffix = "".join(src.suffixes)
+        #CLAUDE Create a uitilityh class in a packagte call3ed comimons .isCompressedSufffix)
+
         if suffix in (".tar.gz", ".tgz") or src.name.endswith(".tar.gz"):
             with tarfile.open(src, "r:gz") as tf:
                 tf.extractall(extract_dir)
