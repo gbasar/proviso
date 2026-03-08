@@ -33,7 +33,7 @@ class TestConstruction:
         assert r.provision_type == "package"
         assert r.provider == "dnf"
         assert r.destination == Path("/usr/bin")
-        assert r.links == ()
+        assert r.symlinks == ()
         assert r.get_latest is False
         assert r.schedule is None
 

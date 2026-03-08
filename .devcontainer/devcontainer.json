@@ -21,7 +21,10 @@
     // X11 socket (XQuartz on Mac, Xorg on Linux)
     "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,optional=true",
     // Wayland socket (Linux only — path is $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY)
-    "source=${localEnv:XDG_RUNTIME_DIR},target=/run/user/host,type=bind,optional=true"
+    "source=${localEnv:XDG_RUNTIME_DIR},target=/run/user/host,type=bind,optional=true",
+    // [proviso:mounts:begin] — managed by `parcel gen-devcontainer`, do not edit
+    "source=${localEnv:HOME}/.proviso/dotfiles,target=/proviso/dotfiles,type=bind,consistency=cached,optional=true",
+    // [proviso:mounts:end]
   ],
 
   // ── Display passthrough (X11 or Wayland — whichever the host uses) ─────────

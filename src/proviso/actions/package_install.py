@@ -15,10 +15,13 @@ import zipfile
 from pathlib import Path
 
 from proviso.actions.protocol import ActionResult, ActionStatus, ShapeMismatchError
+from proviso.commons import is_compressed_suffix
 from proviso.providers.protocol import PackageStatus
 from proviso.providers.registry import ProviderRegistry
 from proviso.provisions.models import PackageProvision
 from proviso.shell.protocol import Shell
+
+_INSTALL_BASE = Path.home() / ".local" / "share" / "proviso"
 
 
 class PackageInstall:
@@ -113,34 +116,29 @@ class PackageInstall:
                 message="already installed",
             )
 
-        # Extract archive to temp dir, then apply symlinks
-        extract_dir = Path(f"/tmp/proviso-{name}")
+        # Permanent extract dir — symlinks point here, so it must survive
+        extract_dir = provision.destination or (_INSTALL_BASE / name)
+        extract_dir = Path(extract_dir).expanduser()
         extract_dir.mkdir(parents=True, exist_ok=True)
 
-        suffix = "".join(src.suffixes)
-        #CLAUDE Create a uitilityh class in a packagte call3ed comimons .isCompressedSufffix)
-
-        if suffix in (".tar.gz", ".tgz") or src.name.endswith(".tar.gz"):
-            with tarfile.open(src, "r:gz") as tf:
-                tf.extractall(extract_dir)
-        elif suffix == ".tar.bz2":
-            with tarfile.open(src, "r:bz2") as tf:
-                tf.extractall(extract_dir)
-        elif suffix == ".zip":
-            with zipfile.ZipFile(src) as zf:
-                zf.extractall(extract_dir)
+        if is_compressed_suffix(src.name):
+            if src.name.endswith(".zip"):
+                with zipfile.ZipFile(src) as zf:
+                    zf.extractall(extract_dir)
+            else:
+                with tarfile.open(src) as tf:
+                    tf.extractall(extract_dir)
         else:
             # Single binary — copy directly
             dest = extract_dir / src.name
             shutil.copy2(src, dest)
             dest.chmod(0o755)
 
-        # Apply symlinks
+        # Apply symlinks from the permanent extract dir
         for link in provision.symlinks:
             link_src = self._find_file(extract_dir, Path(link.src).name)
             link_dest = Path(link.dest).expanduser()
             if link_src is None:
-                shutil.rmtree(extract_dir, ignore_errors=True)
                 return ActionResult(
                     status=ActionStatus.FAILED,
                     action_name=self.action_name,
@@ -151,8 +149,6 @@ class PackageInstall:
             if link_dest.exists() or link_dest.is_symlink():
                 link_dest.unlink()
             link_dest.symlink_to(link_src)
-
-        shutil.rmtree(extract_dir, ignore_errors=True)
 
         if provision.post_install:
             post = self._shell.run(provision.post_install)

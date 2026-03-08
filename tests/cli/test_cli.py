@@ -119,8 +119,9 @@ class TestDispatcher:
         assert results[0]["ok"] is True
 
     def test_action_dispatched(self, manifest_file: Path) -> None:
+        # SourceProvision has no install handler → falls through to "dispatched"
         d = Dispatcher(manifest_path=manifest_file)
-        results = d.run(provision_type=None, name="jq", verb="install")
+        results = d.run(provision_type=None, name="my-app", verb="install")
         assert results[0]["status"] == "dispatched"
 
     def test_unknown_verb(self, manifest_file: Path) -> None:

@@ -183,7 +183,7 @@ class TestRealActionsInPipeline:
 
         pipe = Pipeline(
             name="install-and-log",
-            actions=[PackageInstall(providers=providers), log],
+            actions=[PackageInstall(providers=providers, shell=shell), log],
         )
         provision = PackageProvision(name="jq", provider="dnf", destination=Path("/usr/bin"))
 

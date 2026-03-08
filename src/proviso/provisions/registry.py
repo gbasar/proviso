@@ -36,12 +36,13 @@ from proviso.provisions.models import AnyProvision
 
 _provision_adapter = TypeAdapter(AnyProvision)
 
-_KNOWN_METHODS = {"cargo", "dnf", "apt", "brew", "pip", "go", "npm", "gem", "maven"}
+_KNOWN_METHODS = {"cargo", "dnf", "apt", "brew", "pip", "go", "npm", "gem", "maven", "file"}
 
 # Known fields per type — anything else goes into metadata
-_BASE_KNOWN = {"name", "description", "schedule", "tags", "metadata", "provision_type"}
+_BASE_KNOWN = {"name", "description", "schedule", "tags", "metadata", "provision_type",
+               "symlinks", "pre_install", "post_install"}
 _KNOWN: dict[str, set[str]] = {
-    "package": _BASE_KNOWN | {"provider", "package", "version", "destination", "links", "get_latest", "post_install"},
+    "package": _BASE_KNOWN | {"provider", "package", "version", "destination", "loc", "get_latest"},
     "source":  _BASE_KNOWN | {"repo", "destination", "branch", "compile_cmd", "get_latest"},
     "file":    _BASE_KNOWN | {"src", "destination", "mode"},
 }
@@ -141,12 +142,17 @@ class ProvisionRegistry:
                 raise ProvisionError(
                     f"'{name}': unknown install method '{method}'. Known: {sorted(_KNOWN_METHODS)}"
                 )
-            pkg = install.get("package")
-            if not pkg:
-                raise ProvisionError(f"'{name}': install block is missing 'package'")
             fields["provider"] = method
-            if str(pkg) != name:
-                fields["package"] = str(pkg)
+            if method == "file":
+                loc = install.get("loc")
+                if loc:
+                    fields["loc"] = loc
+            else:
+                pkg = install.get("package")
+                if not pkg:
+                    raise ProvisionError(f"'{name}': install block is missing 'package'")
+                if str(pkg) != name:
+                    fields["package"] = str(pkg)
 
         # Category → prepend to tags
         if category is not None:

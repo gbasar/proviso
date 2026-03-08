@@ -8,7 +8,6 @@ SAMPLE_MANIFEST: dict = {
             "provision_type": "package",
             "provider": "dnf",
             "destination": "/usr/bin",
-            "links": ["/usr/local/bin/jq"],
             "get_latest": True,
             "schedule": "0 1 * * *",
         },

@@ -17,7 +17,7 @@ from proviso.provisions.registry import ProvisionError, ProvisionRegistry
 
 CONF_PATH = (
     Path(__file__).parent.parent.parent
-    / ".devcontainer" / "config" / "modern-linux-utils.conf"
+    / ".devcontainer" / "config" / "provisions" / "modern-linux-utils.conf"
 )
 
 _hocon = HoconAdapter()
@@ -68,9 +68,9 @@ class TestRealManifest:
         assert list(reg.provisions).count("delta") == 1
 
     def test_expected_count(self) -> None:
-        """33 entries (32 real + 1 cross-ref) → 32 provisions."""
+        """31 entries (30 real + 1 cross-ref) → 30 provisions."""
         reg = self._load()
-        assert len(reg.provisions) == 32
+        assert len(reg.provisions) == 30
 
     def test_known_tools_present(self) -> None:
         reg = self._load()

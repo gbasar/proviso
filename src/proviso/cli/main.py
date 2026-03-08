@@ -60,7 +60,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write OK/FAIL/SKIP lines to this file (in addition to stderr)",
     )
 
-    parser.add_argument("command", nargs="*", help="cat <type> [name] [verb]")
+    parser.add_argument(
+        "--devcontainer",
+        metavar="PATH",
+        default=".devcontainer/devcontainer.json",
+        help="Path to devcontainer.json (used by gen-devcontainer)",
+    )
+    parser.add_argument("command", nargs="*", help="cat <type> [name] [verb]  |  gen-devcontainer")
 
     return parser
 
@@ -117,8 +123,20 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    cmd = parse_command(args.command)
     manifest_path = Path(args.manifest)
+
+    if args.command and args.command[0] == "gen-devcontainer":
+        from proviso.devcontainer.gen import gen_devcontainer
+        devcontainer_path = Path(args.devcontainer)
+        try:
+            patched = gen_devcontainer(manifest_path, devcontainer_path)
+            print(f"Updated {devcontainer_path} with {len(patched)} BOUND mount(s): {', '.join(patched)}")
+        except Exception as e:
+            print(f"Error: {e}", file=sys.stderr)
+            return 1
+        return 0
+
+    cmd = parse_command(args.command)
 
     stdin_names: list[str] = []
     if args.stdin and not sys.stdin.isatty():
