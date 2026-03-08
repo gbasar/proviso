@@ -23,6 +23,13 @@ RUN dnf install -y --allowerasing \
     ripgrep fzf btop zoxide hyperfine \
     golang \
     rclone libpcap-devel \
+    && dnf clean all \
+    && ln -sf /usr/bin/python${PYTHON_VERSION} /usr/local/bin/python3
+
+# ── Step 2b: Docker CLI (socket-mounted DooD) ────────────────────────────────
+RUN dnf install -y dnf-plugins-core \
+    && dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo \
+    && dnf install -y docker-ce-cli \
     && dnf clean all
 
 # ── Step 3: Rust via rustup (EPEL rustc too old) ────────────────────────────
@@ -35,7 +42,7 @@ ENV PATH="/root/.cargo/bin:${PATH}" \
 
 # ── Step 4: pip tools ───────────────────────────────────────────────────────
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip${PYTHON_VERSION} install uv yq httpie
+    pip${PYTHON_VERSION} install uv
 
 # ── Step 5: Bootstrap proviso (drives remaining installs) ────────────────────
 COPY pyproject.toml README.md /opt/proviso/
@@ -45,13 +52,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 COPY .devcontainer/config/provisions/ /tmp/provisions/
 
-# ── Step 6: Nushell (own layer — needs /etc/shells registration) ─────────────
-RUN --mount=type=cache,target=/root/.cargo/registry \
-    --mount=type=cache,target=/root/.cargo/git \
-    cargo install --locked --root /usr/local nu \
-    && echo /usr/local/bin/nu >> /etc/shells
-
-# ── Step 7: All other tools via parcel (cargo + go + dnf from conf) ──────────
+# ── Step 6: All tools via parcel (cargo + go + dnf from conf) ───────────────
 RUN --mount=type=cache,target=/root/.cargo/registry \
     --mount=type=cache,target=/root/.cargo/git \
     --mount=type=cache,target=/go-build/pkg/mod \

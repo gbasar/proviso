@@ -32,4 +32,5 @@
 - [ ] lazy.nvim self-bootstrap: already works if bootstrap snippet is in init.lua (verify)
 - [ ] ManifestLoader: produce SourceProvision + FileProvision (not just PackageProvision)
 - [ ] CLI: proviso sync, proviso status
+- [ ] e2e test: real runtime, all provision types, npm provider + local Python HTTP server as fake registry, session-scoped Docker fixture (started once), explicit pass/fail per feature
 - [ ] appendToPath on SourceProvision  # deferred: runtime PATH mutation → env var scope

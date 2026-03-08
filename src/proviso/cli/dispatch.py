@@ -53,7 +53,7 @@ class Dispatcher:
         _providers = ProviderRegistry()
         for p in [DnfProvider(_shell), PipProvider(_shell), CargoProvider(_shell), GoProvider(_shell)]:
             _providers.register(p)
-        self._package_install = PackageInstall(_providers)
+        self._package_install = PackageInstall(_providers, _shell)
 
     def _log(self, level: int, msg: str) -> None:
         if self._verbosity >= level:

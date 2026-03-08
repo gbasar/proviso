@@ -54,6 +54,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Show what would happen without doing it",
     )
+    parser.add_argument(
+        "--log-file",
+        metavar="PATH",
+        help="Write OK/FAIL/SKIP lines to this file (in addition to stderr)",
+    )
 
     parser.add_argument("command", nargs="*", help="cat <type> [name] [verb]")
 
@@ -124,6 +129,7 @@ def main(argv: list[str] | None = None) -> int:
         verbosity=args.verbose,
         output_format=args.format,
         dry_run=args.dry_run,
+        log_file=Path(args.log_file) if args.log_file else None,
     )
 
     try:

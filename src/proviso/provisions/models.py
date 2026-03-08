@@ -66,6 +66,7 @@ class PackageProvision(_ProvisionBase):
     destination: Path | None = None
     links: tuple[Path, ...] = ()
     get_latest: bool = False
+    post_install: str | None = None  # shell command run after a successful install
 
 
 class SourceProvision(_ProvisionBase):

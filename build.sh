@@ -97,4 +97,5 @@ echo ""
 
 docker run -it --rm \
     --mount type=bind,source="$REPO_ROOT",target=/workspace \
+    --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
     "$DEV_TAG"

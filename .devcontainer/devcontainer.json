@@ -16,6 +16,9 @@
   // This is NOT a copy. Both sides see the same files in real time.
   // Edit on your Mac → container sees it instantly. No rebuild needed.
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ],
   "workspaceFolder": "/workspace",
 
   // ── VS Code extensions (installed inside the container) ──────────────────

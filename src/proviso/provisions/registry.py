@@ -41,7 +41,7 @@ _KNOWN_METHODS = {"cargo", "dnf", "apt", "brew", "pip", "go", "npm", "gem", "mav
 # Known fields per type — anything else goes into metadata
 _BASE_KNOWN = {"name", "description", "schedule", "tags", "metadata", "provision_type"}
 _KNOWN: dict[str, set[str]] = {
-    "package": _BASE_KNOWN | {"provider", "package", "version", "destination", "links", "get_latest"},
+    "package": _BASE_KNOWN | {"provider", "package", "version", "destination", "links", "get_latest", "post_install"},
     "source":  _BASE_KNOWN | {"repo", "destination", "branch", "compile_cmd", "get_latest"},
     "file":    _BASE_KNOWN | {"src", "destination", "mode"},
 }
