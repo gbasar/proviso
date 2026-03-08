@@ -35,30 +35,11 @@
   },
   "workspaceFolder": "/workspace",
 
-  // ── VS Code extensions (installed inside the container) ──────────────────
-  "customizations": {
-    "vscode": {
-      "extensions": [
-        "ms-python.python",
-        "ms-python.vscode-pylance",
-        "charliermarsh.ruff",
-        "tamasfe.even-better-toml",
-        "redhat.vscode-yaml",
-        "github.vscode-github-actions",
-        "mhutchie.git-graph",
-        "eamodio.gitlens",
-        "asvetliakov.vscode-neovim"
-      ],
-      "settings": {
-        "python.defaultInterpreterPath": "/workspace/.venv/bin/python",
-        "editor.formatOnSave": true,
-        "[python]": {
-          "editor.defaultFormatter": "charliermarsh.ruff"
-        },
-        "terminal.integrated.defaultProfile.linux": "fish"
-      }
-    }
-  },
+  // ── IDE notes ────────────────────────────────────────────────────────────
+  // Primary IDE: IntelliJ (Linux build running inside the container).
+  // Mac/Linux: IntelliJ Gateway connects directly to the running container.
+  // Windows: IntelliJ runs inside WSL2 → container — 100% Linux stack,
+  //   native Linux filesystem, no Windows path translation.
 
   // ── Lifecycle hooks ───────────────────────────────────────────────────────
   // postCreateCommand: runs ONCE when the container is first created
