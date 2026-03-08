@@ -163,6 +163,10 @@ class Dispatcher:
         ordered = sorted(targets.items(), key=_sort_key)
 
         for name, provision in ordered:
+            if isinstance(provision, PackageProvision):
+                self._log(_V1, f"  START    {name}  [{provision.provider}: {provision.package or name}]")
+            else:
+                self._log(_V1, f"  START    {name}")
             if isinstance(provision, FileProvision) and verb in ("sync", "link"):
                 r = file_sync.execute(provision)
             elif isinstance(provision, PackageProvision) and verb == "install":

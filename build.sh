@@ -28,7 +28,9 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Universal cache — respects XDG, override with DEV_CACHE_DIR=...
 _xdg_cache="${XDG_CACHE_HOME:-$HOME/.cache}"
-CACHE_DIR="${DEV_CACHE_DIR:-${_xdg_cache}/devcontainer}/buildx"
+_cache_base="${DEV_CACHE_DIR:-${_xdg_cache}/devcontainer}"
+CACHE_DIR="${_cache_base}/buildx"
+BIN_CACHE="${_cache_base}/bins"
 TOOLS_TAG="${TOOLS_TAG:-proviso-dev-tools:latest}"
 DEV_TAG="${DEV_TAG:-proviso-dev:latest}"
 BASE_IMAGE="${BASE_IMAGE:-registry.access.redhat.com/ubi9/ubi}"
@@ -49,7 +51,7 @@ for arg in "$@"; do
     esac
 done
 
-mkdir -p "$CACHE_DIR"
+mkdir -p "$CACHE_DIR" "$BIN_CACHE"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 banner() { echo ""; echo "━━━ $* ━━━"; }
@@ -77,6 +79,14 @@ else
         -t "$TOOLS_TAG" \
         "$REPO_ROOT"
 
+    # Extract compiled binaries to host cache
+    banner "Caching compiled binaries → $BIN_CACHE"
+    docker run --rm \
+        --mount "type=bind,source=$BIN_CACHE,target=/bin-cache" \
+        "$TOOLS_TAG" \
+        bash -c 'find /usr/local/bin -maxdepth 1 -type f -executable -exec cp {} /bin-cache/ \;'
+    echo "  $(ls "$BIN_CACHE" | wc -l | tr -d ' ') binaries cached"
+
     if [[ "$PUSH_TOOLS" == "true" ]]; then
         banner "Pushing tools image to registry"
         docker push "$TOOLS_TAG"
@@ -97,6 +107,7 @@ docker build \
 banner "Done"
 echo "  Image:  $DEV_TAG"
 echo "  Cache:  $CACHE_DIR  ($(du -sh "$CACHE_DIR" 2>/dev/null | cut -f1) on disk)"
+echo "  Bins:   $BIN_CACHE  ($(ls "$BIN_CACHE" 2>/dev/null | wc -l | tr -d ' ') files)"
 echo ""
 
 if [[ "$TRACE" == "true" ]]; then

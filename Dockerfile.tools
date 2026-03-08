@@ -55,6 +55,8 @@ COPY .devcontainer/config/provisions/ /tmp/provisions/
 # ── Step 6: All tools via parcel (cargo + go + dnf from conf) ───────────────
 RUN --mount=type=cache,target=/root/.cargo/registry \
     --mount=type=cache,target=/root/.cargo/git \
+    --mount=type=cache,target=/root/.cargo/target \
     --mount=type=cache,target=/go-build/pkg/mod \
-    parcel -vv --log-file /var/log/parcel-install.log \
+    CARGO_TARGET_DIR=/root/.cargo/target \
+    parcel -vv \
         -m /tmp/provisions/modern-linux-utils.conf package install
