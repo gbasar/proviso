@@ -67,7 +67,7 @@ class Dispatcher:
         if not self._manifest_path.exists():
             return
         data = self._markup.read_file(self._manifest_path)
-        if "PROVISION_LIST" in data:
+        if "PROVISION_LIST" in data or "PROVISO_REQUIRED_PROVISIONS" in data:
             scanner = ManifestScanner(self._markup)
             provisions = scanner.scan(self._manifest_path)
             self._log(_V3, f"  loaded {len(provisions)} provisions via PROVISION_LIST")
@@ -155,20 +155,26 @@ class Dispatcher:
         results = []
         file_sync = FileSync()
 
-        # BOUND must run before SYMLINK — dead pointer if mount isn't up yet.
+        # Execution order: BOUND (0) → default SYMLINK/COPY (1) → override SYMLINK/COPY (2)
+        # "override" = provision has metadata["override"] = true, used by personal dotfiles
+        # to ensure they always win over devcontainer defaults.
         def _sort_key(item: tuple[str, Any]) -> int:
             p = item[1]
             if isinstance(p, FileProvision) and (p.mode or "").upper() == "BOUND":
                 return 0
+            if p.metadata.get("override"):
+                return 2
             return 1
 
         ordered = sorted(targets.items(), key=_sort_key)
+        total = len(ordered)
 
-        for name, provision in ordered:
+        for i, (name, provision) in enumerate(ordered, 1):
+            n = f"[{i}/{total}]"
             if isinstance(provision, PackageProvision):
-                self._log(_V1, f"Provisioning {name}  [{provision.provider}: {provision.package or name}]")
+                self._log(_V1, f"{n} {name}  [{provision.provider}: {provision.package or name}]")
             else:
-                self._log(_V1, f"Provisioning {name}")
+                self._log(_V1, f"{n} {name}")
             t0 = time.monotonic()
             if isinstance(provision, FileProvision) and verb in ("sync", "link"):
                 r = file_sync.execute(provision)
@@ -189,13 +195,13 @@ class Dispatcher:
                 "message": r.message,
             })
             if r.status.value == "failed":
-                msg = f"[proviso]   FAILED   {name}: {r.message} ({elapsed:.1f}s)"
+                msg = f"[proviso]   FAILED   {n} {name}: {r.message} ({elapsed:.1f}s)"
                 print(msg, file=sys.stderr)
                 if self._log_fh is not None:
                     print(msg, file=self._log_fh, flush=True)
             elif r.status.value == "skipped":
-                self._log(_V2, f"  SKIP     {name}: {r.message} ({elapsed:.1f}s)")
+                self._log(_V2, f"  SKIP     {n} {name}: {r.message} ({elapsed:.1f}s)")
             else:
-                self._log(_V1, f"  OK       {name}: {r.message} ({elapsed:.1f}s)")
+                self._log(_V1, f"  OK       {n} {name}: {r.message} ({elapsed:.1f}s)")
 
         return results

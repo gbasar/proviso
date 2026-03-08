@@ -25,20 +25,26 @@ from proviso.markup import MarkupRegistry, create_default_registry
 from proviso.provisions.models import AnyProvision
 from proviso.provisions.registry import ProvisionRegistry
 
+_REQUIRED_KEY = "PROVISO_REQUIRED_PROVISIONS"
 _PROVISION_LIST_KEY = "PROVISION_LIST"
 
 
 class ManifestScanner:
-    """Loads provisions from a PROVISION_LIST — files, folders, or globs."""
+    """Loads provisions from a PROVISION_LIST — files, folders, or globs.
+
+    PROVISO_REQUIRED_PROVISIONS entries are loaded first (system/config requirements).
+    PROVISION_LIST entries are loaded after (user-facing apps and tools).
+    """
 
     def __init__(self, markup: MarkupRegistry | None = None) -> None:
         self._markup = markup or create_default_registry()
 
     def scan(self, root: Path) -> list[AnyProvision]:
-        """Load the root manifest, extract PROVISION_LIST, return all provisions."""
+        """Load the root manifest, extract both lists, return all provisions in order."""
         data = self._markup.read_file(root)
-        entries: list[str] = data.get(_PROVISION_LIST_KEY, [])
-        paths = self._resolve(entries)
+        required_entries: list[str] = data.get(_REQUIRED_KEY, [])
+        user_entries: list[str] = data.get(_PROVISION_LIST_KEY, [])
+        paths = self._resolve(required_entries) + self._resolve(user_entries)
         return self._load_all(paths)
 
     def scan_list(self, entries: list[str], base: Path | None = None) -> list[AnyProvision]:

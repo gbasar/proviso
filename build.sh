@@ -36,15 +36,18 @@ DEV_TAG="${DEV_TAG:-proviso-dev:latest}"
 BASE_IMAGE="${BASE_IMAGE:-registry.access.redhat.com/ubi9/ubi}"
 PUSH_TOOLS=false
 TRACE=false
+RUNTIME=orbstack   # orbstack (default, GUI native) | docker (Docker Desktop / work)
 
 for arg in "$@"; do
     case "$arg" in
         --push-tools) PUSH_TOOLS=true ;;
         --trace)      TRACE=true ;;
+        --docker)     RUNTIME=docker ;;
         --help|-h)
-            echo "Usage: ./build.sh [--push-tools] [--trace]"
+            echo "Usage: ./build.sh [--push-tools] [--trace] [--docker]"
             echo "  --push-tools       push tools image to registry after build"
             echo "  --trace            run parcel under viztracer (saves trace.json)"
+            echo "  --docker           use plain Docker (Docker Desktop / work); default is OrbStack"
             echo "  TOOLS_IMAGE=<img>  use pre-built tools image instead of building"
             echo "  BASE_IMAGE=<img>   override UBI9 base image"
             exit 0 ;;
@@ -128,8 +131,10 @@ else
             --mount "type=bind,source=/tmp/.X11-unix,target=/tmp/.X11-unix"
         )
         echo "  Display: X11 ($DISPLAY)"
-    else
+    elif [[ "$RUNTIME" == "orbstack" ]]; then
         echo "  Display: none (headless — OrbStack handles GUI natively)"
+    else
+        echo "  Display: none (headless)"
     fi
 
     docker run -it --rm \
