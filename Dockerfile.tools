@@ -42,7 +42,7 @@ ENV PATH="/root/.cargo/bin:${PATH}" \
 
 # ── Step 4: pip tools ───────────────────────────────────────────────────────
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip${PYTHON_VERSION} install uv
+    pip${PYTHON_VERSION} install uv viztracer
 
 # ── Step 5: Bootstrap proviso (drives remaining installs) ────────────────────
 COPY pyproject.toml README.md /opt/proviso/

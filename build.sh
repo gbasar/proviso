@@ -33,13 +33,17 @@ TOOLS_TAG="${TOOLS_TAG:-proviso-dev-tools:latest}"
 DEV_TAG="${DEV_TAG:-proviso-dev:latest}"
 BASE_IMAGE="${BASE_IMAGE:-registry.access.redhat.com/ubi9/ubi}"
 PUSH_TOOLS=false
+TRACE=false
 
 for arg in "$@"; do
     case "$arg" in
         --push-tools) PUSH_TOOLS=true ;;
+        --trace)      TRACE=true ;;
         --help|-h)
-            echo "Usage: ./build.sh [--push-tools]"
-            echo "  TOOLS_IMAGE=<img>  use pre-built tools image from registry"
+            echo "Usage: ./build.sh [--push-tools] [--trace]"
+            echo "  --push-tools       push tools image to registry after build"
+            echo "  --trace            run parcel under viztracer (saves trace.json)"
+            echo "  TOOLS_IMAGE=<img>  use pre-built tools image instead of building"
             echo "  BASE_IMAGE=<img>   override UBI9 base image"
             exit 0 ;;
     esac
@@ -95,7 +99,11 @@ echo "  Image:  $DEV_TAG"
 echo "  Cache:  $CACHE_DIR  ($(du -sh "$CACHE_DIR" 2>/dev/null | cut -f1) on disk)"
 echo ""
 
-docker run -it --rm \
-    --mount type=bind,source="$REPO_ROOT",target=/workspace \
-    --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
-    "$DEV_TAG"
+if [[ "$TRACE" == "true" ]]; then
+    TOOLS_TAG="$TOOLS_TAG" bash "$REPO_ROOT/scripts/trace.sh"
+else
+    docker run -it --rm \
+        --mount type=bind,source="$REPO_ROOT",target=/workspace \
+        --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
+        "$DEV_TAG"
+fi
