@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ══════════════════════════════════════════════════════════════════════════════
-# scripts/trace.sh — Run parcel under viztracer inside the tools image.
+# scripts/trace.sh — Run proviso under viztracer inside the tools image.
 #
 # Traces all three provision types in one container run:
 #   1. package install  (modern-linux-utils.conf)
@@ -25,7 +25,7 @@ PACKAGES_CONF=".devcontainer/config/provisions/modern-linux-utils.conf"
 DOTFILES_CONF=".devcontainer/config/provisions/dotfiles.conf"
 
 echo ""
-echo "━━━ Tracing parcel under viztracer ━━━"
+echo "━━━ Tracing proviso under viztracer ━━━"
 echo "  Image: $TOOLS_TAG"
 echo ""
 
@@ -33,8 +33,8 @@ echo "  [1/2] package install ($PACKAGES_CONF)"
 docker run --rm \
     --mount type=bind,source="$REPO_ROOT",target=/workspace \
     "$TOOLS_TAG" \
-    viztracer --output_file /workspace/trace-packages.json \
-        parcel -vv \
+    viztracer --output_file /workspace/trace-packages.json -- \
+        proviso -vv \
             -m "/workspace/$PACKAGES_CONF" \
             package install
 
@@ -43,8 +43,8 @@ echo "  [2/2] file sync ($DOTFILES_CONF)"
 docker run --rm \
     --mount type=bind,source="$REPO_ROOT",target=/workspace \
     "$TOOLS_TAG" \
-    viztracer --output_file /workspace/trace-dotfiles.json \
-        parcel -vv \
+    viztracer --output_file /workspace/trace-dotfiles.json -- \
+        proviso -vv \
             -m "/workspace/$DOTFILES_CONF" \
             file sync
 

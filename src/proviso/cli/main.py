@@ -1,13 +1,13 @@
 """Parcel CLI — load manifest, select provisions, dispatch through pipelines.
 
 Usage:
-    parcel cat package list
-    parcel cat package jq install -vvv
-    parcel cat package list --tag=dev
-    parcel cat source list --scheduled
-    parcel cat file trading-hosts status
-    parcel cat list
-    echo "jq" | parcel cat package install --stdin
+    proviso cat package list
+    proviso cat package jq install -vvv
+    proviso cat package list --tag=dev
+    proviso cat source list --scheduled
+    proviso cat file trading-hosts status
+    proviso cat list
+    echo "jq" | proviso cat package install --stdin
 """
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from proviso.cli.output import format_output
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="parcel",
+        prog="proviso",
         description="Universal declarative provision lifecycle manager.",
     )
     parser.add_argument(

@@ -56,10 +56,11 @@ class Dispatcher:
         self._package_install = PackageInstall(_providers, _shell)
 
     def _log(self, level: int, msg: str) -> None:
+        line = f"[proviso] {msg}"
         if self._verbosity >= level:
-            print(msg, file=sys.stderr)
+            print(line, file=sys.stderr)
         if self._log_fh is not None:
-            print(msg, file=self._log_fh, flush=True)
+            print(line, file=self._log_fh, flush=True)
 
     def _load(self) -> None:
         if not self._manifest_path.exists():
@@ -164,9 +165,9 @@ class Dispatcher:
 
         for name, provision in ordered:
             if isinstance(provision, PackageProvision):
-                self._log(_V1, f"  START    {name}  [{provision.provider}: {provision.package or name}]")
+                self._log(_V1, f"Provisioning {name}  [{provision.provider}: {provision.package or name}]")
             else:
-                self._log(_V1, f"  START    {name}")
+                self._log(_V1, f"Provisioning {name}")
             if isinstance(provision, FileProvision) and verb in ("sync", "link"):
                 r = file_sync.execute(provision)
             elif isinstance(provision, PackageProvision) and verb == "install":
@@ -185,7 +186,7 @@ class Dispatcher:
                 "message": r.message,
             })
             if r.status.value == "failed":
-                msg = f"  FAILED   {name}: {r.message}"
+                msg = f"[proviso]   FAILED   {name}: {r.message}"
                 print(msg, file=sys.stderr)
                 if self._log_fh is not None:
                     print(msg, file=self._log_fh, flush=True)

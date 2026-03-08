@@ -13,7 +13,7 @@ step() { echo ""; echo "━━━ $* ━━━"; }
 # ── 1. Dotfile symlinks (managed by proviso) ─────────────────────────────────
 step "Linking configs"
 export PROVISION_LIST=/workspace/.devcontainer/config/manifest.conf
-uv run parcel -vvv -m "$PROVISION_LIST" file sync
+uv run proviso -vvv -m "$PROVISION_LIST" file sync
 echo "  configs linked"
 
 # ── 2. Python project dependencies ───────────────────────────────────────────
