@@ -48,8 +48,7 @@
   // postStartCommand: runs EVERY time the container starts
   "postStartCommand": "echo \"Branch: $(git -C /workspace branch --show-current 2>/dev/null) | Python: $(uv run python --version 2>&1 | head -1)\"",
 
-  // Run as the non-root devuser
-  "remoteUser": "devuser",
+  "remoteUser": "${localEnv:USER}",
 
   // Forward ports if your project has a dev server
   "forwardPorts": []
