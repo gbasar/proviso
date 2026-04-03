@@ -37,6 +37,8 @@ BASE_IMAGE="${BASE_IMAGE:-registry.access.redhat.com/ubi9/ubi}"
 PUSH_TOOLS=false
 TRACE=false
 TEST=false
+RUN_ONLY=false
+VERBOSE=0
 RUNTIME=orbstack   # orbstack (default, GUI native) | docker (Docker Desktop / work)
 
 for arg in "$@"; do
@@ -44,23 +46,31 @@ for arg in "$@"; do
         --push-tools) PUSH_TOOLS=true ;;
         --trace)      TRACE=true ;;
         --test)       TEST=true ;;
+        --run)        RUN_ONLY=true ;;
         --docker)     RUNTIME=docker ;;
+        -v*)          VERBOSE=${#arg}; VERBOSE=$(( VERBOSE - 1 )) ;;  # -v=1, -vv=2, -vvv=3
         --help|-h)
-            echo "Usage: ./build.sh [--push-tools] [--trace] [--test] [--docker]"
+            echo "Usage: ./build.sh [--push-tools] [--run] [--trace] [--test] [--docker] [-v|-vv|-vvv]"
             echo "  --push-tools       push tools image to registry after build"
+            echo "  --run              skip build, just launch the container"
             echo "  --trace            run parcel under viztracer (saves trace.json)"
             echo "  --test             launch display tests (xeyes + gtk3-demo) simultaneously"
             echo "  --docker           use plain Docker (Docker Desktop / work); default is OrbStack"
+            echo "  -v/-vv/-vvv        verbosity: plain build output / +docker args / +set -x"
             echo "  TOOLS_IMAGE=<img>  use pre-built tools image instead of building"
             echo "  BASE_IMAGE=<img>   override UBI9 base image"
             exit 0 ;;
     esac
 done
 
+[[ $VERBOSE -ge 3 ]] && set -x
+
 mkdir -p "$CACHE_DIR" "$BIN_CACHE"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 banner() { echo ""; echo "━━━ $* ━━━"; }
+log()    { if [[ $VERBOSE -ge $1 ]]; then echo "  [v$1] ${*:2}"; fi; }
+# log 1 "msg" → printed at -v; log 2 "msg" → -vv; log 3 "msg" → -vvv
 
 # Populates display_args array and prints which display is active
 detect_display() {
@@ -89,6 +99,12 @@ cache_flags=(
     --cache-from "type=local,src=$CACHE_DIR"
     --cache-to   "type=local,dest=$CACHE_DIR,mode=max"
 )
+# progress=plain at -v or above; default (tty spinner) otherwise
+[[ $VERBOSE -ge 1 ]] && progress_flag="--progress=plain" || progress_flag="--progress=auto"
+
+if [[ "$RUN_ONLY" == "true" ]]; then
+    banner "Skipping build — launching $DEV_TAG"
+else
 
 # ── Step 1: Build (or pull) the tools base image ─────────────────────────────
 if [[ -n "${TOOLS_IMAGE:-}" ]]; then
@@ -132,6 +148,7 @@ fi
 
 banner "Building dev container image (fast)"
 docker build \
+    "$progress_flag" \
     --build-arg TOOLS_IMAGE="$TOOLS_TAG" \
     --build-arg USERNAME="$(whoami)" \
     --build-arg USER_UID="$(id -u)" \
@@ -145,6 +162,8 @@ echo "  Cache:  $CACHE_DIR  ($(du -sh "$CACHE_DIR" 2>/dev/null | cut -f1) on dis
 echo "  Bins:   $BIN_CACHE  ($(ls "$BIN_CACHE" 2>/dev/null | wc -l | tr -d ' ') files)"
 echo ""
 
+fi  # end RUN_ONLY skip
+
 if [[ "$TRACE" == "true" ]]; then
     TOOLS_TAG="$TOOLS_TAG" bash "$REPO_ROOT/scripts/trace.sh"
 elif [[ "$TEST" == "true" ]]; then
@@ -156,9 +175,38 @@ elif [[ "$TEST" == "true" ]]; then
         bash -c 'xeyes & gtk3-demo; wait'
 else
     detect_display
+
+    # Resolve docker socket — on macOS/OrbStack the symlink target is a host path
+    # that won't exist inside the Linux container, so resolve to the real path first.
+    _sock_src="$(readlink -f /var/run/docker.sock 2>/dev/null || echo "")"
+    sock_args=()
+    if [[ -S "${_sock_src:-}" ]]; then
+        sock_args+=(--mount "type=bind,source=${_sock_src},target=/var/run/docker.sock")
+        log 2 "docker socket: ${_sock_src}"
+    else
+        echo "  Warning: docker socket not found — docker-in-docker unavailable"
+    fi
+
+    # ~/.proviso/ — mount whole dir so dotfiles, packages, etc. are all accessible at /proviso/
+    proviso_args=()
+    if [[ -d "$HOME/.proviso" ]]; then
+        proviso_args+=(--mount "type=bind,source=$HOME/.proviso,target=/proviso")
+        log 1 "proviso dir: $HOME/.proviso → /proviso"
+    fi
+
+    log 2 "docker run args: display=${display_args[*]:-} sock=${sock_args[*]:-} proviso=${proviso_args[*]:-}"
+
     docker run -it --rm \
         --mount type=bind,source="$REPO_ROOT",target=/workspace \
-        --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
+        "${sock_args[@]}" \
         "${display_args[@]}" \
-        "$DEV_TAG"
+        "${proviso_args[@]}" \
+        -p 9001:9001 \
+        "$DEV_TAG" \
+        bash -c '
+            if [[ "${SKIP_SETUP:-}" != "1" ]]; then
+                bash /workspace/.devcontainer/setup.sh
+            fi
+            exec "$(command -v fish || echo /bin/bash)"
+        '
 fi

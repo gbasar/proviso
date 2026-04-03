@@ -60,6 +60,14 @@ class FileSync:
     # ------------------------------------------------------------------
 
     def _symlink(self, name: str, src: Path, dest: Path) -> ActionResult:
+        if not src.exists():
+            return ActionResult(
+                status=ActionStatus.SKIPPED,
+                action_name=self.action_name,
+                resource_name=name,
+                message=f"source absent ({src})",
+            )
+
         if dest.is_symlink():
             if dest.resolve() == src.resolve():
                 return ActionResult(

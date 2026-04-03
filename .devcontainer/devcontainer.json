@@ -23,7 +23,7 @@
     // Wayland socket (Linux only — path is $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY)
     "source=${localEnv:XDG_RUNTIME_DIR},target=/run/user/host,type=bind,optional=true",
     // [proviso:mounts:begin] — managed by `parcel gen-devcontainer`, do not edit
-    "source=${localEnv:HOME}/.proviso/dotfiles,target=/proviso/dotfiles,type=bind,consistency=cached,optional=true",
+    "source=${localEnv:HOME}/.proviso,target=/proviso,type=bind,consistency=cached,optional=true",
     // [proviso:mounts:end]
   ],
 

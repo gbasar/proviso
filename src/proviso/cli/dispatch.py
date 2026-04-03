@@ -66,6 +66,11 @@ class Dispatcher:
     def _load(self) -> None:
         if not self._manifest_path.exists():
             return
+        if self._manifest_path.is_dir():
+            for conf in sorted(self._manifest_path.glob("*.conf")):
+                self._provisions.load_file(conf, self._markup)
+                self._log(_V3, f"  loaded manifest: {conf}")
+            return
         data = self._markup.read_file(self._manifest_path)
         if "PROVISION_LIST" in data or "PROVISO_REQUIRED_PROVISIONS" in data:
             scanner = ManifestScanner(self._markup)
@@ -156,13 +161,12 @@ class Dispatcher:
         file_sync = FileSync()
 
         # Execution order: BOUND (0) → default SYMLINK/COPY (1) → override SYMLINK/COPY (2)
-        # "override" = provision has metadata["override"] = true, used by personal dotfiles
-        # to ensure they always win over devcontainer defaults.
+        # override = true => personal dotfiles that replace devcontainer defaults
         def _sort_key(item: tuple[str, Any]) -> int:
             p = item[1]
             if isinstance(p, FileProvision) and (p.mode or "").upper() == "BOUND":
                 return 0
-            if p.metadata.get("override"):
+            if isinstance(p, FileProvision) and p.override:
                 return 2
             return 1
 

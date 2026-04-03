@@ -13,6 +13,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -28,8 +29,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "-m",
         "--manifest",
-        default="manifest.conf",
-        help="Path to manifest file (default: manifest.conf)",
+        default=None,
+        help="Path to manifest file or provisions directory (default: $PROVISO_CONF_DIR, .devcontainer/config/provisions/, or manifest.conf)",
     )
     parser.add_argument(
         "-v",
@@ -119,11 +120,25 @@ def parse_command(args: list[str]) -> dict[str, str | None]:
     return result
 
 
+_DEFAULT_PROVISIONS_DIR = Path(".devcontainer/config/provisions")
+_FALLBACK_MANIFEST = Path("manifest.conf")
+
+
+def _resolve_manifest(explicit: str | None) -> Path:
+    if explicit is not None:
+        return Path(explicit)
+    if env := os.environ.get("PROVISO_CONF_DIR"):
+        return Path(env)
+    if _DEFAULT_PROVISIONS_DIR.is_dir():
+        return _DEFAULT_PROVISIONS_DIR
+    return _FALLBACK_MANIFEST
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    manifest_path = Path(args.manifest)
+    manifest_path = _resolve_manifest(args.manifest)
 
     if args.command and args.command[0] == "gen-devcontainer":
         from proviso.devcontainer.gen import gen_devcontainer

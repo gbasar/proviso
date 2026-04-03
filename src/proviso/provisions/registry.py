@@ -44,7 +44,7 @@ _BASE_KNOWN = {"name", "description", "schedule", "tags", "metadata", "provision
 _KNOWN: dict[str, set[str]] = {
     "package": _BASE_KNOWN | {"provider", "package", "version", "destination", "loc", "get_latest"},
     "source":  _BASE_KNOWN | {"repo", "destination", "branch", "compile_cmd", "get_latest"},
-    "file":    _BASE_KNOWN | {"src", "destination", "mode"},
+    "file":    _BASE_KNOWN | {"src", "destination", "mode", "override"},
 }
 
 

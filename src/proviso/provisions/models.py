@@ -118,6 +118,7 @@ class FileProvision(_ProvisionBase):
     destination: Path              # where it lands on disk
     src: Path | str | None = None  # where it comes from (not required for bare file refs)
     mode: str | None = None        # SYMLINK | COPY | BOUND
+    override: bool = False         # true = runs last, replacing earlier symlinks (for personal dotfiles)
 
 
 # --- Discriminated union ---
