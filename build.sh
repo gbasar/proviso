@@ -62,6 +62,29 @@ mkdir -p "$CACHE_DIR" "$BIN_CACHE"
 # ── Helpers ───────────────────────────────────────────────────────────────────
 banner() { echo ""; echo "━━━ $* ━━━"; }
 
+# Populates display_args array and prints which display is active
+detect_display() {
+    display_args=()
+    if [[ -n "${WAYLAND_DISPLAY:-}" && -S "${XDG_RUNTIME_DIR:-}/${WAYLAND_DISPLAY:-}" ]]; then
+        display_args+=(
+            -e WAYLAND_DISPLAY="$WAYLAND_DISPLAY"
+            -e XDG_RUNTIME_DIR=/run/user/host
+            --mount "type=bind,source=${XDG_RUNTIME_DIR},target=/run/user/host"
+        )
+        echo "  Display: Wayland ($WAYLAND_DISPLAY)"
+    elif [[ -n "${DISPLAY:-}" && -d /tmp/.X11-unix ]]; then
+        display_args+=(
+            -e DISPLAY="$DISPLAY"
+            --mount "type=bind,source=/tmp/.X11-unix,target=/tmp/.X11-unix"
+        )
+        echo "  Display: X11 ($DISPLAY)"
+    elif [[ "$RUNTIME" == "orbstack" ]]; then
+        echo "  Display: none (headless — OrbStack handles GUI natively)"
+    else
+        echo "  Display: none (headless)"
+    fi
+}
+
 cache_flags=(
     --cache-from "type=local,src=$CACHE_DIR"
     --cache-to   "type=local,dest=$CACHE_DIR,mode=max"
@@ -125,27 +148,14 @@ echo ""
 if [[ "$TRACE" == "true" ]]; then
     TOOLS_TAG="$TOOLS_TAG" bash "$REPO_ROOT/scripts/trace.sh"
 elif [[ "$TEST" == "true" ]]; then
-    # ── Detect display: Wayland > X11 > none ─────────────────────────────────
-    display_args=()
-    if [[ -n "${WAYLAND_DISPLAY:-}" && -S "${XDG_RUNTIME_DIR:-}/${WAYLAND_DISPLAY:-}" ]]; then
-        display_args+=(
-            -e WAYLAND_DISPLAY="$WAYLAND_DISPLAY"
-            -e XDG_RUNTIME_DIR=/run/user/host
-            --mount "type=bind,source=${XDG_RUNTIME_DIR},target=/run/user/host"
-        )
-        echo "  Display: Wayland ($WAYLAND_DISPLAY)"
-    elif [[ -n "${DISPLAY:-}" && -d /tmp/.X11-unix ]]; then
-        display_args+=(
-            -e DISPLAY="$DISPLAY"
-            --mount "type=bind,source=/tmp/.X11-unix,target=/tmp/.X11-unix"
-        )
-        echo "  Display: X11 ($DISPLAY)"
-    elif [[ "$RUNTIME" == "orbstack" ]]; then
-        echo "  Display: none (headless — OrbStack handles GUI natively)"
-    else
-        echo "  Display: none (headless)"
-    fi
-
+    detect_display
+    banner "Display test — xeyes (X11) + gtk3-demo (Wayland/X11) — close both windows to exit"
+    docker run --rm \
+        "${display_args[@]}" \
+        "$DEV_TAG" \
+        bash -c 'xeyes & gtk3-demo; wait'
+else
+    detect_display
     docker run -it --rm \
         --mount type=bind,source="$REPO_ROOT",target=/workspace \
         --mount type=bind,source=/var/run/docker.sock,target=/var/run/docker.sock \
