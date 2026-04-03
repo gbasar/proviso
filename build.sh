@@ -36,17 +36,20 @@ DEV_TAG="${DEV_TAG:-proviso-dev:latest}"
 BASE_IMAGE="${BASE_IMAGE:-registry.access.redhat.com/ubi9/ubi}"
 PUSH_TOOLS=false
 TRACE=false
+TEST=false
 RUNTIME=orbstack   # orbstack (default, GUI native) | docker (Docker Desktop / work)
 
 for arg in "$@"; do
     case "$arg" in
         --push-tools) PUSH_TOOLS=true ;;
         --trace)      TRACE=true ;;
+        --test)       TEST=true ;;
         --docker)     RUNTIME=docker ;;
         --help|-h)
-            echo "Usage: ./build.sh [--push-tools] [--trace] [--docker]"
+            echo "Usage: ./build.sh [--push-tools] [--trace] [--test] [--docker]"
             echo "  --push-tools       push tools image to registry after build"
             echo "  --trace            run parcel under viztracer (saves trace.json)"
+            echo "  --test             launch display tests (xeyes + gtk3-demo) simultaneously"
             echo "  --docker           use plain Docker (Docker Desktop / work); default is OrbStack"
             echo "  TOOLS_IMAGE=<img>  use pre-built tools image instead of building"
             echo "  BASE_IMAGE=<img>   override UBI9 base image"
@@ -70,9 +73,12 @@ if [[ -n "${TOOLS_IMAGE:-}" ]]; then
     docker pull "$TOOLS_IMAGE"
     docker tag  "$TOOLS_IMAGE" "$TOOLS_TAG"
 else
+    if docker image inspect "$TOOLS_TAG" >/dev/null 2>&1; then
+        banner "Tools image '$TOOLS_TAG' already exists — skipping heavy build"
+        echo "  To force a rebuild: docker rmi $TOOLS_TAG && ./build.sh"
+    else
     banner "Building tools base image (cargo/go/pip — heavy, cached)"
     echo "  Cache: $CACHE_DIR  (shared across all devcontainer projects)"
-    echo "  To skip this next time: TOOLS_IMAGE=$TOOLS_TAG ./build.sh"
     docker buildx build \
         "${cache_flags[@]}" \
         --build-arg BASE_IMAGE="$BASE_IMAGE" \
@@ -96,6 +102,7 @@ else
         echo "  Pushed: $TOOLS_TAG"
         echo "  Others can now run: TOOLS_IMAGE=$TOOLS_TAG ./build.sh"
     fi
+    fi  # end: image not found
 fi
 
 # ── Step 2: Build the dev container (fast — no cargo/go compiles here) ───────
@@ -117,7 +124,7 @@ echo ""
 
 if [[ "$TRACE" == "true" ]]; then
     TOOLS_TAG="$TOOLS_TAG" bash "$REPO_ROOT/scripts/trace.sh"
-else
+elif [[ "$TEST" == "true" ]]; then
     # ── Detect display: Wayland > X11 > none ─────────────────────────────────
     display_args=()
     if [[ -n "${WAYLAND_DISPLAY:-}" && -S "${XDG_RUNTIME_DIR:-}/${WAYLAND_DISPLAY:-}" ]]; then
