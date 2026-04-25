@@ -3,6 +3,7 @@
 # scripts/trace.sh — Run proviso under viztracer inside the tools image.
 #
 # Traces all three provision types in one container run:
+p
 #   1. package install  (modern-linux-utils.conf)
 #   2. file sync        (dotfiles.conf)
 #

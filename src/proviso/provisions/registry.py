@@ -42,7 +42,7 @@ _KNOWN_METHODS = {"cargo", "dnf", "apt", "brew", "pip", "go", "npm", "gem", "mav
 _BASE_KNOWN = {"name", "description", "schedule", "tags", "metadata", "provision_type",
                "symlinks", "pre_install", "post_install"}
 _KNOWN: dict[str, set[str]] = {
-    "package": _BASE_KNOWN | {"provider", "package", "version", "destination", "loc", "get_latest"},
+    "package": _BASE_KNOWN | {"provider", "package", "version", "destination", "loc", "repo", "get_latest"},
     "source":  _BASE_KNOWN | {"repo", "destination", "branch", "compile_cmd", "get_latest"},
     "file":    _BASE_KNOWN | {"src", "destination", "mode", "override"},
 }
@@ -148,6 +148,8 @@ class ProvisionRegistry:
                 if loc:
                     fields["loc"] = loc
             else:
+                if repo := install.get("repo"):
+                    fields["repo"] = repo
                 pkg = install.get("package")
                 if not pkg:
                     raise ProvisionError(f"'{name}': install block is missing 'package'")

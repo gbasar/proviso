@@ -44,6 +44,9 @@ class PackageInstall:
         if provision.provider == "file":
             return self._install_file(provision)
 
+        if provision.provider == "cargo" and provision.repo:
+            return self._install_cargo_git(provision)
+
         provider = self._providers.get(provision.provider)
         name = provision.name
         package = provision.package or name
@@ -83,6 +86,48 @@ class PackageInstall:
             action_name=self.action_name,
             resource_name=name,
             message=result.message,
+        )
+
+    def _install_cargo_git(self, provision: PackageProvision) -> ActionResult:
+        name = provision.name
+        binary = provision.package or name
+
+        # Idempotent: check if binary already installed
+        check = self._shell.run("cargo install --list --root /usr/local")
+        if check.success and f"\n{binary} v" in f"\n{check.stdout}":
+            return ActionResult(
+                status=ActionStatus.SKIPPED,
+                action_name=self.action_name,
+                resource_name=name,
+                message="already installed",
+            )
+
+        result = self._shell.run(
+            f"cargo install --git {provision.repo} {binary} --root /usr/local"
+        )
+        if not result.success:
+            return ActionResult(
+                status=ActionStatus.FAILED,
+                action_name=self.action_name,
+                resource_name=name,
+                message=result.stderr,
+            )
+
+        if provision.post_install:
+            post = self._shell.run(provision.post_install)
+            if not post.success:
+                return ActionResult(
+                    status=ActionStatus.FAILED,
+                    action_name=self.action_name,
+                    resource_name=name,
+                    message=f"post_install failed: {post.stderr}",
+                )
+
+        return ActionResult(
+            status=ActionStatus.SUCCESS,
+            action_name=self.action_name,
+            resource_name=name,
+            message="installed from git",
         )
 
     def _install_file(self, provision: PackageProvision) -> ActionResult:
