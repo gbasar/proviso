@@ -42,7 +42,7 @@ _KNOWN_METHODS = {"cargo", "dnf", "apt", "brew", "pip", "go", "npm", "gem", "mav
 _BASE_KNOWN = {"name", "description", "schedule", "tags", "metadata", "provision_type",
                "symlinks", "pre_install", "post_install"}
 _KNOWN: dict[str, set[str]] = {
-    "package": _BASE_KNOWN | {"provider", "package", "version", "destination", "loc", "repo", "get_latest"},
+    "package": _BASE_KNOWN | {"provider", "package", "version", "destination", "loc", "repo", "get_latest", "fallback_urls"},
     "source":  _BASE_KNOWN | {"repo", "destination", "branch", "compile_cmd", "get_latest"},
     "file":    _BASE_KNOWN | {"src", "destination", "mode", "override"},
 }
@@ -143,6 +143,8 @@ class ProvisionRegistry:
                     f"'{name}': unknown install method '{method}'. Known: {sorted(_KNOWN_METHODS)}"
                 )
             fields["provider"] = method
+            if urls := install.get("fallback_urls"):
+                fields["fallback_urls"] = urls
             if method == "file":
                 loc = install.get("loc")
                 if loc:

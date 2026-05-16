@@ -13,6 +13,7 @@ from proviso.actions import (
     PackageInstall,
     ShapeMismatchError,
 )
+from proviso.commons import maybe_sudo
 from proviso.providers import DnfProvider, PipProvider, ProviderRegistry
 from proviso.provisions import FileProvision, PackageProvision, SourceProvision
 from proviso.provisions.models import Symlink
@@ -57,7 +58,7 @@ class TestPackageInstall:
         shell = FakeShell(
             responses={
                 "rpm -q jq": ShellResult(1),
-                "dnf install -y jq": ShellResult(0),
+                maybe_sudo("dnf install -y jq"): ShellResult(0),
             }
         )
         action = _make_action(shell)
@@ -67,7 +68,7 @@ class TestPackageInstall:
 
         assert result.status == ActionStatus.SUCCESS
         assert result.resource_name == "jq"
-        assert "dnf install -y jq" in shell.commands_run
+        assert maybe_sudo("dnf install -y jq") in shell.commands_run
 
     def test_skip_already_installed(self) -> None:
         shell = FakeShell(responses={"rpm -q jq": ShellResult(0, "jq-1.6")})
@@ -80,7 +81,7 @@ class TestPackageInstall:
         assert len(shell.commands_run) == 1
 
     def test_update_when_get_latest(self) -> None:
-        shell = FakeShell(responses={"dnf update -y jq": ShellResult(0)})
+        shell = FakeShell(responses={maybe_sudo("dnf update -y jq"): ShellResult(0)})
         action = _make_action(shell)
         provision = PackageProvision(
             name="jq",
@@ -92,7 +93,7 @@ class TestPackageInstall:
         result = action.execute(provision)
 
         assert result.status == ActionStatus.SUCCESS
-        assert "dnf update -y jq" in shell.commands_run
+        assert maybe_sudo("dnf update -y jq") in shell.commands_run
 
     def test_install_library_via_pip(self) -> None:
         shell = FakeShell(
@@ -112,7 +113,7 @@ class TestPackageInstall:
         shell = FakeShell(
             responses={
                 "rpm -q jq": ShellResult(1),
-                "dnf install -y jq": ShellResult(1, "", "no such package"),
+                maybe_sudo("dnf install -y jq"): ShellResult(1, "", "no such package"),
             }
         )
         action = _make_action(shell)
@@ -135,6 +136,135 @@ class TestPackageInstall:
 
         with pytest.raises(ShapeMismatchError):
             action.execute(provision)
+
+
+# --- Fallback URLs ---
+
+
+class TestFallbackUrls:
+    def test_filtered_method_with_fallback_downloads_url(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        archive = _make_tar_gz(tmp_path / "nvim.tar.gz", "nvim")
+        link_dest = tmp_path / "bin" / "nvim"
+
+        def fake_retrieve(url: str, dest: str) -> tuple[str, object]:
+            import shutil
+            shutil.copy2(archive, dest)
+            return dest, {}
+
+        monkeypatch.setattr("urllib.request.urlretrieve", fake_retrieve)
+
+        provision = PackageProvision(
+            name="neovim",
+            provider="dnf",
+            fallback_urls=("https://github.com/neovim/releases/nvim.tar.gz",),
+            symlinks=(_symlink("nvim", str(link_dest)),),
+        )
+        action = _make_action()
+        result = action.execute(provision, method_filter=frozenset({"cargo"}))
+
+        assert result.status == ActionStatus.SUCCESS
+        assert link_dest.exists() or link_dest.is_symlink()
+
+    def test_filtered_method_no_fallback_is_skipped(self) -> None:
+        provision = PackageProvision(name="neovim", provider="dnf")
+        action = _make_action()
+        result = action.execute(provision, method_filter=frozenset({"cargo"}))
+
+        assert result.status == ActionStatus.SKIPPED
+        assert "allowed_methods" in result.message
+
+    def test_failed_primary_triggers_fallback(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        archive = _make_tar_gz(tmp_path / "nvim.tar.gz", "nvim")
+        link_dest = tmp_path / "bin" / "nvim"
+
+        def fake_retrieve(url: str, dest: str) -> tuple[str, object]:
+            import shutil
+            shutil.copy2(archive, dest)
+            return dest, {}
+
+        monkeypatch.setattr("urllib.request.urlretrieve", fake_retrieve)
+
+        shell = FakeShell(
+            responses={
+                "rpm -q neovim_": ShellResult(1),
+                "dnf install -y neovim_": ShellResult(1, "", "no such package"),
+            }
+        )
+        provision = PackageProvision(
+            name="neovim",
+            provider="dnf",
+            package="neovim_",
+            fallback_urls=("https://github.com/neovim/releases/nvim.tar.gz",),
+            symlinks=(_symlink("nvim", str(link_dest)),),
+        )
+        action = _make_action(shell)
+        result = action.execute(provision)
+
+        assert result.status == ActionStatus.SUCCESS
+
+    def test_all_fallbacks_fail_returns_failed(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        def fake_retrieve(url: str, dest: str) -> None:
+            raise OSError("network unreachable")
+
+        monkeypatch.setattr("urllib.request.urlretrieve", fake_retrieve)
+
+        shell = FakeShell(
+            responses={
+                "rpm -q jq": ShellResult(1),
+                maybe_sudo("dnf install -y jq"): ShellResult(1, "", "error"),
+            }
+        )
+        provision = PackageProvision(
+            name="jq",
+            provider="dnf",
+            fallback_urls=(
+                "https://github.com/example/jq-1.tar.gz",
+                "https://github.com/example/jq-2.tar.gz",
+            ),
+        )
+        action = _make_action(shell)
+        result = action.execute(provision)
+
+        assert result.status == ActionStatus.FAILED
+        assert "all fallbacks failed" in result.message
+
+    def test_first_successful_fallback_wins(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        archive = _make_tar_gz(tmp_path / "tool.tar.gz", "tool")
+        link_dest = tmp_path / "bin" / "tool"
+        call_count = {"n": 0}
+
+        def fake_retrieve(url: str, dest: str) -> tuple[str, object]:
+            import shutil
+            call_count["n"] += 1
+            if call_count["n"] == 1:
+                raise OSError("first URL down")
+            shutil.copy2(archive, dest)
+            return dest, {}
+
+        monkeypatch.setattr("urllib.request.urlretrieve", fake_retrieve)
+
+        provision = PackageProvision(
+            name="tool",
+            provider="dnf",
+            fallback_urls=(
+                "https://github.com/bad/tool.tar.gz",
+                "https://github.com/good/tool.tar.gz",
+            ),
+            symlinks=(_symlink("tool", str(link_dest)),),
+        )
+        action = _make_action()
+        result = action.execute(provision, method_filter=frozenset({"cargo"}))
+
+        assert result.status == ActionStatus.SUCCESS
+        assert call_count["n"] == 2
 
 
 # --- GitSync ---

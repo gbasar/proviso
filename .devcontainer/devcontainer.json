@@ -17,7 +17,7 @@
   // Edit on your Mac → container sees it instantly. No rebuild needed.
   "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
   "mounts": [
-    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind",
+    "source=${localEnv:HOME}/.docker/run/docker.sock,target=/var/run/docker.sock,type=bind",
     // X11 socket (XQuartz on Mac, Xorg on Linux)
     "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind,optional=true",
     // Wayland socket (Linux only — path is $XDG_RUNTIME_DIR/$WAYLAND_DISPLAY)

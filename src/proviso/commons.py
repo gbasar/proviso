@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 _COMPRESSED_SUFFIXES = {".tar.gz", ".tgz", ".tar.bz2", ".tar.xz", ".zip"}
 
 
@@ -9,3 +11,8 @@ def is_compressed_suffix(filename: str) -> bool:
     """Return True if filename ends with a recognised archive extension."""
     name = filename.lower()
     return any(name.endswith(s) for s in _COMPRESSED_SUFFIXES)
+
+
+def maybe_sudo(cmd: str) -> str:
+    """Prefix cmd with 'sudo' when not running as root."""
+    return cmd if os.getuid() == 0 else f"sudo {cmd}"

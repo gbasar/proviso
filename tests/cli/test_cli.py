@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Any
 
@@ -147,6 +148,68 @@ class TestDispatcher:
         assert len(results) == 0
 
 
+class TestMethodFilter:
+    def test_cli_filter_skips_excluded_methods(self, manifest_file: Path) -> None:
+        d = Dispatcher(manifest_path=manifest_file, dry_run=True, method_filter=frozenset({"dnf"}))
+        results = d.run(provision_type="package", name=None, verb="install")
+        skipped = [r for r in results if r.get("status") == "skipped"]
+        installed = [r for r in results if r.get("dry_run")]
+        assert any(r["name"] == "requests" for r in skipped), "pip provision should be skipped"
+        assert any(r["name"] == "jq" for r in installed), "dnf provision should run"
+
+    def test_cli_filter_allows_multiple_methods(self, manifest_file: Path) -> None:
+        d = Dispatcher(manifest_path=manifest_file, dry_run=True, method_filter=frozenset({"dnf", "pip"}))
+        results = d.run(provision_type="package", name=None, verb="install")
+        skipped = [r for r in results if r.get("status") == "skipped"]
+        assert len(skipped) == 0
+
+    def test_no_filter_runs_all(self, manifest_file: Path) -> None:
+        d = Dispatcher(manifest_path=manifest_file, dry_run=True)
+        results = d.run(provision_type="package", name=None, verb="install")
+        skipped = [r for r in results if r.get("status") == "skipped"]
+        assert len(skipped) == 0
+
+    def test_env_var_filter(self, manifest_file: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("PROVISO_METHODS", "dnf")
+        d = Dispatcher(manifest_path=manifest_file, dry_run=True)
+        results = d.run(provision_type="package", name=None, verb="install")
+        skipped = [r for r in results if r.get("status") == "skipped"]
+        assert any(r["name"] == "requests" for r in skipped)
+
+    def test_cli_overrides_env_var(self, manifest_file: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("PROVISO_METHODS", "dnf")
+        d = Dispatcher(manifest_path=manifest_file, dry_run=True, method_filter=frozenset({"dnf", "pip"}))
+        results = d.run(provision_type="package", name=None, verb="install")
+        skipped = [r for r in results if r.get("status") == "skipped"]
+        assert len(skipped) == 0, "CLI filter should override env var, allowing pip"
+
+    def test_manifest_allowed_methods(self, tmp_path: Path) -> None:
+        markup = create_default_registry()
+        manifest: dict[str, Any] = {
+            "allowed_methods": ["dnf"],
+            "provisions": {
+                "jq":       {"provision_type": "package", "provider": "dnf"},
+                "requests": {"provision_type": "package", "provider": "pip"},
+            },
+        }
+        path = tmp_path / "manifest.conf"
+        markup.write_file(manifest, path)
+        d = Dispatcher(manifest_path=path, dry_run=True)
+        results = d.run(provision_type="package", name=None, verb="install")
+        skipped = [r for r in results if r.get("status") == "skipped"]
+        assert any(r["name"] == "requests" for r in skipped)
+        assert not any(r["name"] == "jq" and r.get("status") == "skipped" for r in results)
+
+    def test_main_method_flag(self, manifest_file: Path) -> None:
+        exit_code = main([
+            "--manifest", str(manifest_file),
+            "--method", "dnf",
+            "--dry-run",
+            "cat", "package", "install",
+        ])
+        assert exit_code == 0
+
+
 class TestFormatOutput:
     def test_text_format(self) -> None:
         results = [{"name": "jq", "type": "package", "schedule": "0 1 * * *"}]
@@ -177,6 +240,67 @@ class TestFormatOutput:
         assert len(lines) == 2
         assert lines[0].startswith("jq")
         assert lines[1].startswith("rg")
+
+
+class TestAudit:
+    def test_audit_writes_yaml(self, tmp_path: Path) -> None:
+        markup = create_default_registry()
+        manifest: dict[str, Any] = {
+            "provisions": {
+                "jq":       {"provision_type": "package", "provider": "dnf"},
+                "requests": {"provision_type": "package", "provider": "pip"},
+                "eza":      {"provision_type": "package", "provider": "cargo"},
+            },
+        }
+        path = tmp_path / "manifest.conf"
+        markup.write_file(manifest, path)
+        out = tmp_path / "audit.yaml"
+
+        d = Dispatcher(manifest_path=path, audit_out=out)
+        results = d.run(provision_type="package", name=None, verb="audit")
+
+        assert out.exists()
+        import yaml
+        doc = yaml.safe_load(out.read_text())
+        assert doc["total_packages"] == 3
+        names = {p["name"] for p in doc["packages"]}
+        assert names == {"jq", "requests", "eza"}
+        assert "by_method" in doc["summary"]
+        assert len(results) == 3
+
+    def test_audit_dnf_candidate_flagged(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        markup = create_default_registry()
+        manifest: dict[str, Any] = {
+            "provisions": {
+                "ripgrep": {"provision_type": "package", "provider": "cargo", "package": "ripgrep"},
+            },
+        }
+        path = tmp_path / "manifest.conf"
+        markup.write_file(manifest, path)
+        out = tmp_path / "audit.yaml"
+
+        from proviso.providers.dnf import DnfProvider
+        monkeypatch.setattr(DnfProvider, "is_in_repo", lambda self, pkg: True)
+
+        d = Dispatcher(manifest_path=path, audit_out=out)
+        d.run(provision_type="package", name=None, verb="audit")
+
+        import yaml
+        doc = yaml.safe_load(out.read_text())
+        pkg = doc["packages"][0]
+        assert pkg["dnf_available"] is True
+        assert "dnf_candidates" in doc["summary"]
+        assert "ripgrep" in doc["summary"]["dnf_candidates"]
+
+    def test_audit_via_cli(self, manifest_file: Path, tmp_path: Path) -> None:
+        out = tmp_path / "audit.yaml"
+        exit_code = main([
+            "--manifest", str(manifest_file),
+            "--audit-out", str(out),
+            "cat", "package", "audit",
+        ])
+        assert exit_code == 0
+        assert out.exists()
 
 
 class TestMainEntryPoint:

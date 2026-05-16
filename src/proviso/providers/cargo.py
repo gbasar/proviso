@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from proviso.commons import maybe_sudo
 from proviso.providers.protocol import PackageStatus, ProviderResult
 from proviso.shell.protocol import Shell
 
@@ -27,7 +28,7 @@ class CargoProvider:
 
     def install(self, package_name: str) -> ProviderResult:
         result = self._shell.run(
-            f"cargo install --locked --root /usr/local {package_name}"
+            maybe_sudo(f"cargo install --locked --root /usr/local {package_name}")
         )
         if result.success:
             return ProviderResult(status=PackageStatus.INSTALLED, message="installed")
@@ -35,7 +36,7 @@ class CargoProvider:
 
     def update(self, package_name: str) -> ProviderResult:
         result = self._shell.run(
-            f"cargo install --locked --root /usr/local {package_name}"
+            maybe_sudo(f"cargo install --locked --root /usr/local {package_name}")
         )
         if result.success:
             return ProviderResult(status=PackageStatus.INSTALLED, message="updated")

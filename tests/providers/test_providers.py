@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import pytest
 
+from proviso.commons import maybe_sudo
 from proviso.providers import (
     AptProvider,
     DnfProvider,
@@ -36,13 +37,13 @@ class TestDnfProvider:
         shell = FakeShell(
             responses={
                 "rpm -q jq": ShellResult(1),
-                "dnf install -y jq": ShellResult(0),
+                maybe_sudo("dnf install -y jq"): ShellResult(0),
             }
         )
         provider = DnfProvider(shell=shell)
         result = provider.install("jq")
         assert result.status == PackageStatus.INSTALLED
-        assert shell.commands_run == ["rpm -q jq", "dnf install -y jq"]
+        assert shell.commands_run == ["rpm -q jq", maybe_sudo("dnf install -y jq")]
 
     def test_install_idempotent(self) -> None:
         shell = FakeShell(responses={"rpm -q jq": ShellResult(0, "jq-1.6")})

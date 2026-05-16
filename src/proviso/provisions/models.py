@@ -72,13 +72,14 @@ class PackageProvision(_ProvisionBase):
     """Any installable package — system or language-level."""
 
     provision_type: Literal[ProvisionKind.PACKAGE] = ProvisionKind.PACKAGE
-    provider: str                  # "dnf", "apt", "brew", "pip", "cargo", "go", "file"
-    package: str | None = None     # install identifier when it differs from name
-    loc: Path | None = None        # source path for method=file
-    repo: str | None = None        # git URL for cargo git installs
+    provider: str                      # "dnf", "apt", "brew", "pip", "cargo", "go", "file"
+    package: str | None = None         # install identifier when it differs from name
+    loc: Path | None = None            # source path for method=file
+    repo: str | None = None            # git URL for cargo git installs
     version: str | None = None
     destination: Path | None = None
     get_latest: bool = False
+    fallback_urls: tuple[str, ...] = ()  # tried in order if primary method fails or is filtered
 
     @model_validator(mode="after")
     def _file_method_requires_symlinks(self) -> "PackageProvision":

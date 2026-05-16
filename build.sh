@@ -176,14 +176,20 @@ elif [[ "$TEST" == "true" ]]; then
 else
     detect_display
 
-    # Resolve docker socket — on macOS/OrbStack the symlink target is a host path
-    # that won't exist inside the Linux container, so resolve to the real path first.
-    _sock_src="$(readlink -f /var/run/docker.sock 2>/dev/null || echo "")"
+    # Resolve docker socket — check canonical locations in priority order.
     sock_args=()
-    if [[ -S "${_sock_src:-}" ]]; then
-        sock_args+=(--mount "type=bind,source=${_sock_src},target=/var/run/docker.sock")
-        log 2 "docker socket: ${_sock_src}"
-    else
+    for _candidate in \
+        "$HOME/.docker/run/docker.sock" \
+        "/var/run/docker.sock" \
+        "$HOME/.orbstack/run/docker.sock"; do
+        _sock_src="$(readlink -f "$_candidate" 2>/dev/null || echo "")"
+        if [[ -S "${_sock_src:-}" ]]; then
+            sock_args+=(--mount "type=bind,source=${_sock_src},target=/var/run/docker.sock")
+            log 2 "docker socket: ${_sock_src}"
+            break
+        fi
+    done
+    if [[ ${#sock_args[@]} -eq 0 ]]; then
         echo "  Warning: docker socket not found — docker-in-docker unavailable"
     fi
 
@@ -198,9 +204,9 @@ else
 
     docker run -it --rm \
         --mount type=bind,source="$REPO_ROOT",target=/workspace \
-        "${sock_args[@]}" \
-        "${display_args[@]}" \
-        "${proviso_args[@]}" \
+        "${sock_args[@]+"${sock_args[@]}"}" \
+        "${display_args[@]+"${display_args[@]}"}" \
+        "${proviso_args[@]+"${proviso_args[@]}"}" \
         -p 9001:9001 \
         "$DEV_TAG" \
         bash -c '

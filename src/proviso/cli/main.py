@@ -62,6 +62,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        "--audit-out",
+        metavar="PATH",
+        default="proviso-audit.yaml",
+        help="Path to write audit YAML (default: proviso-audit.yaml). Used with 'audit' verb.",
+    )
+    parser.add_argument(
+        "--method",
+        metavar="METHODS",
+        default=None,
+        help="Comma-separated install methods to allow (e.g. dnf,pip). Overrides PROVISO_METHODS env var and manifest allowed_methods.",
+    )
+    parser.add_argument(
         "--devcontainer",
         metavar="PATH",
         default=".devcontainer/devcontainer.json",
@@ -92,7 +104,7 @@ def parse_command(args: list[str]) -> dict[str, str | None]:
         return result
 
     types = {"package", "source", "file", "host"}
-    verbs = {"list", "install", "uninstall", "sync", "status", "info", "connect", "link"}
+    verbs = {"list", "install", "uninstall", "sync", "status", "info", "connect", "link", "audit"}
 
     if args[0] in types:
         result["provision_type"] = args[0]
@@ -157,12 +169,18 @@ def main(argv: list[str] | None = None) -> int:
     if args.stdin and not sys.stdin.isatty():
         stdin_names = [line.strip() for line in sys.stdin if line.strip()]
 
+    method_filter: frozenset[str] | None = None
+    if args.method:
+        method_filter = frozenset(m.strip() for m in args.method.split(",") if m.strip())
+
     dispatcher = Dispatcher(
         manifest_path=manifest_path,
         verbosity=args.verbose,
         output_format=args.format,
         dry_run=args.dry_run,
         log_file=Path(args.log_file) if args.log_file else None,
+        method_filter=method_filter,
+        audit_out=Path(args.audit_out),
     )
 
     try:
