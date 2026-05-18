@@ -105,3 +105,30 @@ docker run -it --rm \
   --mount type=bind,source=$(pwd),target=/workspace \
   proviso-dev:latest
 ```
+
+---
+
+## Why not devcontainers (and what we do instead)
+
+Dev containers are a reasonable idea that accumulates the wrong tradeoffs over time:
+
+- **Slow startup.** Every session involves spinning up a container, waiting for the IDE backend to attach, and negotiating mounts. On a fast machine this is annoying. On a slow one it's a tax on every context switch.
+- **IDE runs remote, not native.** JetBrains Remote Development and VS Code Server both run the IDE backend inside the container. You get latency, reduced plugin compatibility, and a second-class experience compared to running the IDE natively.
+- **Docker Desktop is spyware-adjacent.** Telemetry on by default, background services, a dashboard that phones home. On Windows it also fights with WSL2 for kernel resources.
+- **JetBrains Toolbox is the same problem.** Auto-updates, telemetry, a background agent running at all times. Not acceptable on a dev machine you care about.
+- **`BOUND` mounts are a workaround for a problem baremetal doesn't have.** Grafting host dotfiles into a container via bind mount is solving a problem you created by using a container in the first place.
+- **Reproducibility is a myth in practice.** The container is reproducible. Your dotfiles, your SSH keys, your personal tools, your muscle memory — none of that travels with it. You end up with a reproducible shell and an irreproducible human.
+
+### What proviso does instead
+
+**Target: WSL2 as baremetal Linux.**
+
+- WSL2 Ubuntu is the machine. Proviso runs directly on it — no container wrapper.
+- Packages, dotfiles, tools are installed onto the real filesystem via `dnf`/`apt`/`cargo`/`pip`.
+- GUI apps (IntelliJ, Neovide, anything GTK/Qt) run natively in WSL2.
+- WSLg (built into Windows 11) forwards Wayland/X11 windows to the Windows display automatically — no config, no Remote Development, no Gateway. A shortcut launches the app; Windows shows the window.
+- IntelliJ is installed directly from a tar.gz. No Toolbox.
+- `BOUND` mode becomes a no-op on baremetal — the path just exists.
+- The same manifest that provisions the Docker dev container provisions WSL2. Swap the target, keep the manifest.
+
+The Docker dev container (`./build.sh`) still exists for CI, onboarding, and environments where you can't or won't touch the host. But it is not the primary target.
